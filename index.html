@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vorrat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#EDF1F2;--sf:#fff;--ink:#14262E;--mut:#5E7078;--ln:#D3DCDF;--ac:#0F7B6C;--acd:#fff;--nf:#3B5BDB;--warn:#C2410C;--wbg:#FDE8DC;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1A1F;--sf:#18272E;--ink:#E6EEF0;--mut:#8FA3AB;--ln:#2A3C44;--ac:#3FC1AD;--acd:#08201B;--nf:#8AA2FF;--warn:#FF9C6B;--wbg:#3A2418}}
+:root[data-theme="dark"]{--bg:#0F1A1F;--sf:#18272E;--ink:#E6EEF0;--mut:#8FA3AB;--ln:#2A3C44;--ac:#3FC1AD;--acd:#08201B;--nf:#8AA2FF;--warn:#FF9C6B;--wbg:#3A2418}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Figtree,system-ui,sans-serif;padding-bottom:90px}
+main{max-width:640px;margin:0 auto;padding:0 14px}
+h1{font-size:26px;font-weight:800;margin:18px 0 2px;letter-spacing:-.02em}
+.sub{color:var(--mut);font-size:14px;margin:0 0 12px}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tabs button,.chip{border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:99px;padding:8px 14px;font:600 14px Figtree,system-ui,sans-serif;cursor:pointer}
+.tabs button.on,.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input,select{width:100%;padding:11px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--ink);font:16px Figtree,system-ui,sans-serif}
+label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 4px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}.chips .chip{white-space:nowrap;padding:6px 12px}
+.item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:12px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;gap:10px}
+.item.nf{border-left-color:var(--nf)}
+.item .t{flex:1;min-width:0;cursor:pointer}.item b{display:block;overflow-wrap:anywhere}
+.meta{font-size:13px;color:var(--mut)}
+.exp{display:inline-block;background:var(--wbg);color:var(--warn);border-radius:6px;padding:0 6px;font-weight:600;font-size:12px}
+.qty{display:flex;align-items:center;gap:6px}.qty button{width:34px;height:34px;border-radius:50%;border:1px solid var(--ln);background:var(--bg);color:var(--ink);font-size:20px;cursor:pointer}
+.qty span{min-width:28px;text-align:center;font-weight:800}
+.btn{border:0;border-radius:12px;padding:12px 16px;font:700 16px Figtree,system-ui,sans-serif;background:var(--ac);color:var(--acd);cursor:pointer}
+.btn.s{background:var(--sf);color:var(--ink);border:1px solid var(--ln)}.btn.d{background:var(--wbg);color:var(--warn)}
+.fab{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;max-width:640px;margin:0 auto}
+.fab .btn{flex:1}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet.open{display:flex}
+.card{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+video{width:100%;border-radius:12px;background:#000;max-height:40vh}
+.thumb{width:44px;height:44px;object-fit:contain;border-radius:8px;background:#fff;flex:none}
+.empty{text-align:center;color:var(--mut);padding:36px 10px}
+.li{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--ln)}
+.li button{background:none;border:0;color:var(--warn);font-weight:600;cursor:pointer}
+.msg{font-size:14px;color:var(--warn);margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Vorrat</h1>
+<p class="sub" id="sum"></p>
+<div class="tabs" id="tabs"></div>
+<div id="view"></div>
+</main>
+<div class="fab"><button class="btn s" id="bScan">Scannen</button><button class="btn" id="bAdd">Manuell hinzufügen</button></div>
+<div class="sheet" id="sheet"><div class="card" id="card"></div></div>
+
+<script>
+var zx=null,KEY='vorrat-v1',S,flt={type:'',loc:'',cat:'',q:''},tab='bestand',stream=null,scanTimer=null;
+function def(){return{locs:['Kühlschrank','Gefrierfach','Vorratsschrank','Keller','Badezimmer','Putzschrank'],
+cats:[['Milchprodukte','f'],['Obst & Gemüse','f'],['Fleisch & Fisch','f'],['Getränke','f'],['Konserven','f'],['Backen & Grundzutaten','f'],['Putzmittel','n'],['Drogerie','n'],['Hygiene','n']].map(function(c){return{n:c[0],t:c[1]}}),
+items:[],codes:{}}}
+function load(){try{var r=localStorage.getItem(KEY);S=r?JSON.parse(r):def()}catch(e){S=def()}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Speicher voll – die letzte Änderung konnte nicht gespeichert werden. Exportiere eine Sicherung und entferne einige eigene Fotos.')}}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function catT(n){var c=S.cats.filter(function(x){return x.n===n})[0];return c?c.t:'f'}
+function days(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5)}
+
+function render(){
+ var n=S.items.length,f=S.items.filter(function(i){return catT(i.cat)==='f'}).length;
+ $('sum').textContent=n+' Artikel · '+f+' Lebensmittel · '+(n-f)+' Non-Food';
+ $('tabs').innerHTML=['bestand','ordnung'].map(function(t){return '<button class="'+(tab===t?'on':'')+'" data-t="'+t+'">'+(t==='bestand'?'Bestand':'Orte & Kategorien')+'</button>'}).join('');
+ $('tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){tab=b.dataset.t;render()}});
+ document.querySelector('.fab').style.display=tab==='bestand'?'flex':'none';
+ tab==='bestand'?renderList():renderManage();
+}
+function chipRow(key,opts){return '<div class="chips">'+opts.map(function(o){return '<button class="chip '+(flt[key]===o[0]?'on':'')+'" data-k="'+key+'" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'}).join('')+'</div>'}
+function renderList(){
+ var v='<input id="q" type="search" placeholder="Suchen (Name oder Barcode)" value="'+esc(flt.q)+'">';
+ v+=chipRow('type',[['','Alle'],['f','Lebensmittel'],['n','Non-Food']]);
+ v+=chipRow('loc',[['','Alle Orte']].concat(S.locs.map(function(l){return[l,l]})));
+ v+=chipRow('cat',[['','Alle Kategorien']].concat(S.cats.filter(function(c){return !flt.type||c.t===flt.type}).map(function(c){return[c.n,c.n]})));
+ var L=S.items.filter(function(i){
+  var q=flt.q.toLowerCase();
+  return (!flt.type||catT(i.cat)===flt.type)&&(!flt.loc||i.loc===flt.loc)&&(!flt.cat||i.cat===flt.cat)&&(!q||i.name.toLowerCase().indexOf(q)>-1||(i.code||'').indexOf(q)>-1||(i.all||'').toLowerCase().indexOf(q)>-1)
+ }).sort(function(a,b){var x=a.exp||'9999',y=b.exp||'9999';return x<y?-1:x>y?1:a.name.localeCompare(b.name)});
+ if(!L.length)v+='<div class="empty">'+(S.items.length?'Keine Treffer.':'Noch nichts erfasst. Scanne einen Barcode oder füge einen Artikel manuell hinzu.')+'</div>';
+ L.forEach(function(i){
+  var d=days(i.exp),e='';
+  if(d!==null&&d<=7)e=' <span class="exp">'+(d<0?'abgelaufen':d===0?'heute':'noch '+d+' T.')+'</span>';
+  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+IMG(i.img,44)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b><span class="meta">'+esc(i.loc)+' · '+esc(i.cat)+e+'</span>'+(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+(i.unit&&i.unit!=='Stk'?'<small class="meta"> '+esc(i.unit)+'</small>':'')+'</span><button data-p="'+i.id+'">+</button></div></div>'});
+ $('view').innerHTML=v;
+ var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
+ $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
+ $('view').querySelectorAll('[data-e]').forEach(function(b){b.onclick=function(){openForm(find(b.dataset.e))}});
+ $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);if(i.qty===0&&confirm('„'+i.name+'“ ist leer. Aus dem Bestand entfernen?'))S.items=S.items.filter(function(x){return x!==i});save();render()}});
+ $('view').querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){find(b.dataset.p).qty++;save();render()}});
+}
+function find(id){return S.items.filter(function(i){return i.id===id})[0]}
+
+function renderManage(){
+ function block(title,arr,kind){return '<h3>'+title+'</h3>'+arr.map(function(x,ix){var nm=kind==='l'?x:x.n,sub=kind==='c'?'<span class="meta"> · '+(x.t==='f'?'Lebensmittel':'Non-Food')+'</span>':'';
+  return '<div class="li"><span>'+esc(nm)+sub+'</span><button data-d="'+kind+ix+'">Löschen</button></div>'}).join('')}
+ var v=block('Lagerorte',S.locs,'l')+'<div class="row" style="margin-top:10px"><input id="nl" placeholder="Neuer Lagerort"><button class="btn" id="al" style="flex:0 0 auto">Hinzufügen</button></div>';
+ v+=block('Kategorien',S.cats,'c')+'<div class="row" style="margin-top:10px"><input id="nc" placeholder="Neue Kategorie"><select id="nt"><option value="f">Lebensmittel</option><option value="n">Non-Food</option></select></div><button class="btn" id="ac" style="margin-top:8px;width:100%">Kategorie hinzufügen</button>';
+ v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><p class="meta" style="margin-top:14px">Die Daten liegen nur in diesem Browser auf diesem Gerät und zu genau dieser Adresse. Sichere sie regelmäßig.</p>';
+ $('view').innerHTML=v;
+ $('al').onclick=function(){var x=$('nl').value.trim();if(x&&S.locs.indexOf(x)<0){S.locs.push(x);save();render()}};
+ $('ac').onclick=function(){var x=$('nc').value.trim();if(x&&!S.cats.some(function(c){return c.n===x})){S.cats.push({n:x,t:$('nt').value});save();render()}};
+ $('ex').onclick=function(){
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
+  a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
+ $('im').onclick=function(){$('imf').click()};
+ $('imf').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){try{var o=JSON.parse(r.result);if(!Array.isArray(o.locs)||!Array.isArray(o.cats)||!Array.isArray(o.items))throw 0;
+   if(confirm('Aktuellen Bestand durch die Sicherung ersetzen ('+o.items.length+' Artikel)?')){o.codes=o.codes||{};S=o;save();render()}}
+   catch(e){alert('Diese Datei ist keine gültige Vorrats-Sicherung.')}};r.readAsText(f)};
+ $('view').querySelectorAll('[data-d]').forEach(function(b){b.onclick=function(){
+  var k=b.dataset.d[0],ix=+b.dataset.d.slice(1),nm=k==='l'?S.locs[ix]:S.cats[ix].n;
+  var used=S.items.some(function(i){return (k==='l'?i.loc:i.cat)===nm});
+  if(used){alert('„'+nm+'“ wird noch von Artikeln verwendet. Verschiebe diese Artikel zuerst.');return}
+  (k==='l'?S.locs:S.cats).splice(ix,1);save();render()}});
+}
+
+function openSheet(h){$('card').innerHTML=h;$('sheet').classList.add('open')}
+function closeSheet(){stopScan();$('sheet').classList.remove('open')}
+$('sheet').onclick=function(e){if(e.target===$('sheet'))closeSheet()};
+
+var ALG={milk:'Milch',gluten:'Gluten',eggs:'Eier',nuts:'Schalenfrüchte',peanuts:'Erdnüsse',soybeans:'Soja',fish:'Fisch',crustaceans:'Krebstiere',molluscs:'Weichtiere',celery:'Sellerie',mustard:'Senf','sesame-seeds':'Sesam','sulphur-dioxide-and-sulphites':'Sulfite',lupin:'Lupinen'};
+function tagsDE(t){var o=[];(t||[]).forEach(function(x){var k=String(x).replace(/^[a-z]{2}:/,'');var n=ALG[k]||(k.charAt(0).toUpperCase()+k.slice(1).replace(/-/g,' '));if(o.indexOf(n)<0)o.push(n)});return o}
+function IMG(u,z){return(u&&/^(https:\/\/|data:image\/)/.test(u))?'<img class="thumb" style="width:'+z+'px;height:'+z+'px" src="'+esc(u)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':''}
+var SRC=[['https://world.openfoodfacts.org','f'],['https://world.openbeautyfacts.org','b'],['https://world.openproductsfacts.org','p']];
+var MAP=[['dairy','Milchprodukte'],['milk','Milchprodukte'],['cheese','Milchprodukte'],['yogurt','Milchprodukte'],['fruit','Obst & Gemüse'],['vegetable','Obst & Gemüse'],['meat','Fleisch & Fisch'],['fish','Fleisch & Fisch'],['sausage','Fleisch & Fisch'],['beverage','Getränke'],['water','Getränke'],['juice','Getränke'],['canned','Konserven'],['flour','Backen & Grundzutaten'],['sugar','Backen & Grundzutaten'],['baking','Backen & Grundzutaten']];
+function guessCat(tags,src){
+ var ok=function(n){return S.cats.some(function(c){return c.n===n})};
+ if(src==='b')return ok('Drogerie')?'Drogerie':null;
+ if(src!=='f')return null;
+ var t=tags.join(' ').toLowerCase();
+ for(var i=0;i<MAP.length;i++)if(t.indexOf(MAP[i][0])>-1&&ok(MAP[i][1]))return MAP[i][1];
+ return null}
+function lookup(code){
+ var i=0;
+ function next(){
+  if(i>=SRC.length)return Promise.resolve(null);
+  var s=SRC[i++],ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},6000);
+  return fetch(s[0]+'/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_de,brands,quantity,categories_tags,image_front_small_url,allergens_tags,traces_tags',{signal:ctl.signal})
+   .then(function(r){return r.json()}).then(function(j){clearTimeout(t);
+    var p=j&&j.status===1&&j.product,n=p&&(p.product_name_de||p.product_name);
+    if(!n)return next();
+    var b=(p.brands||'').split(',')[0].trim(),name=(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n;
+    if(p.quantity)name+=' '+p.quantity;
+    return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:p.image_front_small_url||'',all:tagsDE(p.allergens_tags).join(', '),tr:tagsDE(p.traces_tags).join(', ')}})
+   .catch(function(){clearTimeout(t);return next()})}
+ return next()}
+
+function openForm(it,code){
+ var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',img:'',all:'',tr:''};
+ var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
+ var h='<h2 style="margin:0">'+(n?'Artikel hinzufügen':'Artikel bearbeiten')+'</h2>'+
+ '<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch 1 l">'+
+ '<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:6px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:8px">Foto & Allergene abrufen</button><div id="fph" style="margin-top:8px">'+IMG(it.img,80)+'</div><div class="row" style="margin-top:8px"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden><label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:6px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'+
+ '<label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+' ('+(c.t==='f'?'Lebensmittel':'Non-Food')+')</option>'}).join('')+'</select>'+
+ '<label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select>'+
+ '<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'],it.unit)+'</select></div></div>'+
+ '<label>Mindesthaltbarkeit (optional)</label><input id="fe" type="date" value="'+esc(it.exp)+'">'+
+ '<div class="row" style="margin-top:18px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>');
+ openSheet(h);
+ var curImg=it.img||'';
+ $('fx').onclick=closeSheet;
+ $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim()}}
+ function setExtra(x){if(x.img){curImg=x.img;$('fph').innerHTML=IMG(curImg,80)}if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
+ $('fp').onclick=function(){$('fpf').click()};
+ $('fpd').onclick=function(){curImg='';$('fph').innerHTML=''};
+ $('fpf').onchange=function(){var f=this.files[0];this.value='';if(!f)return;var im=new Image(),u=URL.createObjectURL(f);
+  im.onload=function(){var k=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+   var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+   curImg=c.toDataURL('image/jpeg',0.65);$('fph').innerHTML=IMG(curImg,80);URL.revokeObjectURL(u)};
+  im.onerror=function(){$('fst').textContent='Das Bild konnte nicht gelesen werden.'};im.src=u};
+ $('fr').onclick=function(){var c=$('fc').value.trim(),st=$('fst');if(!c){st.textContent='Trage zuerst einen Barcode ein.';return}
+  st.textContent='Suche Produktdaten …';
+  lookup(c).then(function(r){if(r){setExtra(r);st.textContent='Foto und Allergene aktualisiert.'}else st.textContent='Nichts gefunden oder offline.'})};
+ function fill(c){
+  var st=$('fst');if(!c||!st||$('fn').value)return;
+  var k=S.codes[c];
+  if(k){$('fn').value=k.name;$('fk').value=k.cat;$('fl').value=k.loc;setExtra(k);st.textContent='Aus deinem Bestand übernommen.';return}
+  if(!/^\d{6,}$/.test(c))return;
+  st.textContent='Suche Produktdaten …';
+  lookup(c).then(function(r){
+   if(!$('fc')||$('fc').value.trim()!==c)return;
+   if(r&&!$('fn').value){$('fn').value=r.name;if(r.cat)$('fk').value=r.cat;setExtra(r);st.textContent='Gefunden bei Open Food Facts – bitte prüfen.'}
+   else if(!r)st.textContent='Nichts gefunden oder offline – bitte Namen selbst eintragen.'})}
+ $('fc').onchange=function(){fill($('fc').value.trim())};
+ if(it.code&&!it.name)fill(it.code);
+ $('fok').onclick=function(){var d=snap();d.name=d.name.trim();d.code=d.code.trim();if(!d.name){$('fn').focus();return}
+  if(n){d.id='i'+Date.now();S.items.push(d)}else{S.items[S.items.indexOf(find(it.id))]=d}
+  if(d.code)S.codes[d.code]={name:d.name,cat:d.cat,loc:d.loc,unit:d.unit,img:/^https:/.test(d.img||'')?d.img:'',all:d.all,tr:d.tr};
+  save();closeSheet();render()};
+ if($('fdel'))$('fdel').onclick=function(){if(confirm('Artikel löschen?')){S.items=S.items.filter(function(x){return x.id!==it.id});save();closeSheet();render()}};
+}
+
+function stopScan(){if(zx){try{zx.reset()}catch(e){}zx=null}
+ if(scanTimer){clearInterval(scanTimer);scanTimer=null}if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}}
+function loadZX(cb){if(window.ZXing)return cb(true);var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';s.onload=function(){cb(!!window.ZXing)};s.onerror=function(){cb(false)};document.head.appendChild(s)}
+function startScan(cb){
+ openSheet('<h2 style="margin:0 0 8px">Barcode scannen</h2><video id="vid" playsinline muted></video><p class="msg" id="sm"></p><label>Oder Barcode eintippen</label><div class="row"><input id="mc" inputmode="numeric" placeholder="EAN, z. B. 4001234567890"><button class="btn" id="mo" style="flex:0 0 auto">OK</button></div><button class="btn s" id="sx" style="width:100%;margin-top:12px">Abbrechen</button>');
+ $('sx').onclick=closeSheet;
+ $('mo').onclick=function(){var c=$('mc').value.trim();if(c){stopScan();cb(c)}};
+ $('mc').onkeydown=function(e){if(e.key==='Enter')$('mo').click()};
+ var sm=$('sm');
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){sm.textContent='Kein Kamerazugriff möglich. Tippe den Code ein.';return}
+ if(!('BarcodeDetector' in window)){
+  sm.style.color='var(--mut)';sm.textContent='Scanner wird geladen …';
+  loadZX(function(ok){
+   if(!ok){sm.style.color='';sm.textContent='Scanner konnte nicht geladen werden (offline?). Tippe den Code ein.';return}
+   try{
+    var h=new Map(),F=ZXing.BarcodeFormat;h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39]);
+    zx=new ZXing.BrowserMultiFormatReader(h,300);sm.textContent='';
+    zx.decodeFromConstraints({video:{facingMode:'environment'}},'vid',function(r){if(r){var c=r.getText();stopScan();cb(c)}})
+     .catch(function(){sm.style.color='';sm.textContent='Kamera nicht verfügbar oder nicht erlaubt. Prüfe die Safari-Einstellungen für diese Seite oder tippe den Code ein.'})
+   }catch(e){sm.style.color='';sm.textContent='Scanner konnte nicht gestartet werden. Tippe den Code ein.'}});
+  return}
+ navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){
+  stream=s;var v=$('vid');v.srcObject=s;v.play();
+  var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+  scanTimer=setInterval(function(){det.detect(v).then(function(r){if(r.length){var c=r[0].rawValue;stopScan();cb(c)}}).catch(function(){})},350);
+ }).catch(function(){sm.textContent='Kamera nicht verfügbar oder nicht erlaubt. Tippe den Code ein.'});
+}
+function onScanned(code){
+ var it=S.items.filter(function(i){return i.code===code})[0];
+ if(it){it.qty++;save();closeSheet();render();openForm(it);return}
+ var k=S.codes[code];
+ if(k){openForm({id:'',name:k.name,code:code,cat:k.cat,loc:k.loc,qty:1,unit:k.unit,exp:''},code);return}
+ openForm(null,code);
+}
+$('bAdd').onclick=function(){openForm(null)};
+$('bScan').onclick=function(){startScan(onScanned)};
+load();render();
+</script>
+</body>
+</html>
