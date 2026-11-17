@@ -1,0 +1,2 @@
+# vorrat
+Claude Vorrats App
