@@ -104,14 +104,17 @@ function renderManage(){
   return '<div class="li"><span>'+esc(nm)+sub+'</span><button data-d="'+kind+ix+'">Löschen</button></div>'}).join('')}
  var v=block('Lagerorte',S.locs,'l')+'<div class="row" style="margin-top:10px"><input id="nl" placeholder="Neuer Lagerort"><button class="btn" id="al" style="flex:0 0 auto">Hinzufügen</button></div>';
  v+=block('Kategorien',S.cats,'c')+'<div class="row" style="margin-top:10px"><input id="nc" placeholder="Neue Kategorie"><select id="nt"><option value="f">Lebensmittel</option><option value="n">Non-Food</option></select></div><button class="btn" id="ac" style="margin-top:8px;width:100%">Kategorie hinzufügen</button>';
- v+='<h3>Synchronisation (GitHub)</h3>'+(TOKEN?'<p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Trennen</button></div>':'<p class="meta">Füge deinen GitHub-Token ein, damit der Bestand auf allen Geräten gleich ist.</p><input id="tk" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off"><button class="btn" id="tc" style="width:100%;margin-top:8px">Verbinden</button>');
+ v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><label>E-Mail</label><input id="em" type="email" autocomplete="username" autocapitalize="off"><label>Passwort</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="tc" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p>');
  v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><p class="meta" style="margin-top:14px">Die Daten liegen nur in diesem Browser auf diesem Gerät und zu genau dieser Adresse. Sichere sie regelmäßig.</p>';
  $('view').innerHTML=v;
  $('al').onclick=function(){var x=$('nl').value.trim();if(x&&S.locs.indexOf(x)<0){S.locs.push(x);save();render()}};
  $('ac').onclick=function(){var x=$('nc').value.trim();if(x&&!S.cats.some(function(c){return c.n===x})){S.cats.push({n:x,t:$('nt').value});save();render()}};
- if($('tc'))$('tc').onclick=function(){var t=$('tk').value.trim();if(!t)return;TOKEN=t;try{localStorage.setItem('vorrat-token',t)}catch(e){}render();pull()};
+ if($('tc')){
+  var go=function(){var em=$('em').value.trim(),pw=$('pw').value;if(!em||!pw)return;$('lm').textContent='';
+   signIn(em,pw).then(function(){render();pull()}).catch(function(e){$('lm').textContent=errMsg(e)})};
+  $('tc').onclick=go;$('pw').onkeydown=function(e){if(e.key==='Enter')go()}}
  if($('sn'))$('sn').onclick=function(){pull()};
- if($('sd'))$('sd').onclick=function(){if(confirm('Synchronisation auf diesem Gerät beenden? Die lokalen Daten bleiben erhalten.')){TOKEN='';SYNC='';try{localStorage.removeItem('vorrat-token')}catch(e){}setLinked(false);render();setSync('')}};
+ if($('sd'))$('sd').onclick=function(){if(confirm('Abmelden? Die Daten bleiben auf diesem Gerät und auf dem Server erhalten.')){saveSes(null);remoteUpd=null;setLinked(false);render();setSync('☁ nicht angemeldet')}};
  $('ex').onclick=function(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
   a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
@@ -240,58 +243,65 @@ function onScanned(code){
 }
 $('bAdd').onclick=function(){openForm(null)};
 $('bScan').onclick=function(){startScan(onScanned)};
-var OWNER='weboh',REPO='vorrat-daten',FILE='vorrat.json',BRANCH='main',TOKEN='',SYNC='',remoteSha=null,pushing=false,dirty=false,ptimer=null;
-try{TOKEN=localStorage.getItem('vorrat-token')||''}catch(e){}
+var SB='https://tuurpmbllrmmvrbwkqae.supabase.co',KEYP='sb_publishable_VczwFORbaxX-CV8RUkVpjw_xjheYIoA',SES=null,SYNC='',remoteUpd=null,pushing=false,dirty=false,ptimer=null;
+try{SES=JSON.parse(localStorage.getItem('vorrat-ses')||'null');localStorage.removeItem('vorrat-token')}catch(e){}
+function saveSes(x){SES=x;try{x?localStorage.setItem('vorrat-ses',JSON.stringify(x)):localStorage.removeItem('vorrat-ses')}catch(e){}}
 function isLinked(){try{return localStorage.getItem('vorrat-linked')==='1'}catch(e){return false}}
 function setLinked(v){try{v?localStorage.setItem('vorrat-linked','1'):localStorage.removeItem('vorrat-linked')}catch(e){}}
-function setSync(t){SYNC=t;var a=$('syncst'),b=$('hs');if(a)a.textContent=t;if(b)b.textContent=TOKEN&&t?'· '+t:''}
-function errMsg(e){return e.status?e.message:'Keine Verbindung – Änderungen bleiben lokal gespeichert'}
-function b64(str){var b=new TextEncoder().encode(str),s='',i;for(i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s)}
-function unb64(x){var s=atob(x.replace(/\s/g,'')),b=new Uint8Array(s.length);for(var i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return new TextDecoder().decode(b)}
-function gh(method,body,raw){
- var h={'Authorization':'Bearer '+TOKEN,'Accept':raw?'application/vnd.github.raw+json':'application/vnd.github+json'};
- if(body)h['Content-Type']='application/json';
- var url='https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+FILE+(method==='GET'?'?ref='+BRANCH+'&t='+Date.now():'');
- return fetch(url,{method:method,headers:h,body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(function(r){
-  if(r.ok)return raw?r.text():r.json();
-  var e=new Error(r.status===401?'Token ungültig oder abgelaufen':r.status===403?'Kein Zugriff – Berechtigung des Tokens prüfen':r.status===404?'Repository oder Datei nicht gefunden – Token und Repository prüfen':'GitHub-Fehler '+r.status);e.status=r.status;throw e})}
-function ghGet(){return gh('GET').then(function(j){
-  var p=(j.content&&j.encoding==='base64')?Promise.resolve(unb64(j.content)):gh('GET',null,true);
-  return p.then(function(t){return{sha:j.sha,data:JSON.parse(t)}})},
- function(e){if(e.status===404)return null;throw e})}
-function adopt(d){d.codes=d.codes||{};S=d;lsSave();render()}
+function setSync(t){SYNC=t;var a=$('syncst'),b=$('hs');if(a)a.textContent=t;if(b)b.textContent=t?'· '+t:''}
+function errMsg(e){return e.status?(e.status===401?'Bitte neu anmelden':e.message):'Keine Verbindung – Änderungen bleiben lokal gespeichert'}
+function fail(e){if(e.status===401&&SES){saveSes(null)}setSync('⚠ '+errMsg(e))}
 function stamp(){return new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}
-function schedulePush(){if(!TOKEN)return;clearTimeout(ptimer);ptimer=setTimeout(function(){push()},1500)}
+function sbFetch(path,opt,tok){
+ opt=opt||{};var h=opt.headers||{};h.apikey=KEYP;if(tok)h.Authorization='Bearer '+tok;if(opt.body)h['Content-Type']='application/json';
+ opt.headers=h;opt.cache='no-store';
+ return fetch(SB+path,opt).then(function(r){
+  if(r.ok)return r.status===204?null:r.json();
+  return r.json().catch(function(){return{}}).then(function(j){
+   var m=j.msg||j.message||j.error_description||j.error||('Fehler '+r.status);
+   if(/invalid login/i.test(m))m='E-Mail oder Passwort falsch';
+   var e=new Error(m);e.status=r.status;throw e})})}
+function setFromTok(j){saveSes({at:j.access_token,rt:j.refresh_token,exp:Math.floor(Date.now()/1000)+(j.expires_in||3600),uid:j.user.id,email:j.user.email});return SES}
+function signIn(em,pw){return sbFetch('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:em,password:pw})}).then(setFromTok)}
+function getTok(){
+ if(!SES){var e=new Error('Nicht angemeldet');e.status=401;return Promise.reject(e)}
+ if(SES.exp-60>Date.now()/1000)return Promise.resolve(SES.at);
+ return sbFetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:SES.rt})}).then(function(j){setFromTok(j);return SES.at},function(e){if(e.status>=400&&e.status<500)e.status=401;throw e})}
+function sbData(path,opt){return getTok().then(function(t){return sbFetch(path,opt,t)})}
+function remoteGet(){return sbData('/rest/v1/vorrat?select=daten,updated_at&user_id=eq.'+SES.uid).then(function(a){return a&&a.length?{upd:a[0].updated_at,data:a[0].daten}:null})}
+function adopt(d){d.codes=d.codes||{};S=d;lsSave();render()}
+function schedulePush(){if(!SES)return;clearTimeout(ptimer);ptimer=setTimeout(function(){push()},1500)}
 function push(n){
- n=n||0;if(!TOKEN)return Promise.resolve();
+ n=n||0;if(!SES)return Promise.resolve();
  if(pushing){dirty=true;return Promise.resolve()}
  pushing=true;setSync('☁ Speichere …');
- var body={message:'Vorrat '+new Date().toISOString(),content:b64(JSON.stringify(S)),branch:BRANCH};
- if(remoteSha)body.sha=remoteSha;
- return gh('PUT',body).then(function(j){
-  remoteSha=j.content.sha;pushing=false;setLinked(true);setSync('☁ Gespeichert '+stamp());
-  if(dirty){dirty=false;return push()}})
- .catch(function(e){pushing=false;
-  if((e.status===409||e.status===422)&&n<2)return conflict(n);
-  setSync('⚠ '+errMsg(e))})}
-function conflict(n){return ghGet().then(function(r){
- if(r&&(r.data.ts||0)>(S.ts||0)){remoteSha=r.sha;adopt(r.data);setSync('☁ Neuerer Stand von anderem Gerät übernommen');return}
- remoteSha=r?r.sha:null;return push(n+1)}).catch(function(e){setSync('⚠ '+errMsg(e))})}
+ var now=new Date().toISOString(),p;
+ if(remoteUpd){
+  p=sbData('/rest/v1/vorrat?user_id=eq.'+SES.uid+'&updated_at=eq.'+encodeURIComponent(remoteUpd),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({daten:S,updated_at:now})})
+   .then(function(a){if(!a||!a.length){var e=new Error('Konflikt');e.conflict=1;throw e}return a[0].updated_at})
+ }else{
+  p=sbData('/rest/v1/vorrat',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({user_id:SES.uid,daten:S,updated_at:now})}).then(function(a){return a[0].updated_at})
+ }
+ return p.then(function(u){remoteUpd=u;pushing=false;setLinked(true);setSync('☁ Gespeichert '+stamp());if(dirty){dirty=false;return push()}})
+ .catch(function(e){pushing=false;if((e.conflict||e.status===409)&&n<2)return conflict(n);fail(e)})}
+function conflict(n){return remoteGet().then(function(r){
+ if(r&&(r.data.ts||0)>(S.ts||0)){remoteUpd=r.upd;adopt(r.data);setSync('☁ Neuerer Stand von anderem Gerät übernommen');return}
+ remoteUpd=r?r.upd:null;return push(n+1)}).catch(fail)}
 function pull(){
- var sh=$('sheet');if(!TOKEN||(sh&&sh.classList.contains('open')))return Promise.resolve();
+ var sh=$('sheet');if(!SES||(sh&&sh.classList.contains('open')))return Promise.resolve();
  setSync('☁ Synchronisiere …');
- return ghGet().then(function(r){
-  if(!r){remoteSha=null;return push()}
-  remoteSha=r.sha;var rd=r.data,rts=rd.ts||0,lts=S.ts||0;
+ return remoteGet().then(function(r){
+  if(!r){remoteUpd=null;return push()}
+  remoteUpd=r.upd;var rd=r.data,rts=rd.ts||0,lts=S.ts||0;
   if(!isLinked()&&S.items.length&&rd.items&&rd.items.length){
-   if(confirm('Auf GitHub liegt schon ein Bestand ('+rd.items.length+' Artikel), auf diesem Gerät sind '+S.items.length+' Artikel.\n\nOK = GitHub-Stand übernehmen (lokaler Stand wird ersetzt)\nAbbrechen = lokalen Stand hochladen (GitHub-Stand wird ersetzt)')){adopt(rd);setLinked(true);setSync('☁ Synchronisiert '+stamp());return}
+   if(confirm('Auf dem Server liegt schon ein Bestand ('+rd.items.length+' Artikel), auf diesem Gerät sind '+S.items.length+' Artikel.\n\nOK = Server-Stand übernehmen (lokaler Stand wird ersetzt)\nAbbrechen = lokalen Stand hochladen (Server-Stand wird ersetzt)')){adopt(rd);setLinked(true);setSync('☁ Synchronisiert '+stamp());return}
    S.ts=Date.now();lsSave();return push()}
   if(rts>lts){adopt(rd);setLinked(true);setSync('☁ Synchronisiert '+stamp());return}
   if(lts>rts)return push();
   setLinked(true);setSync('☁ Synchronisiert '+stamp())
- }).catch(function(e){setSync('⚠ '+errMsg(e))})}
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&TOKEN&&!pushing)pull()});
-load();render();pull();
+ }).catch(fail)}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&SES&&!pushing)pull()});
+load();render();if(SES)pull();else setSync('☁ nicht angemeldet');
 </script>
 </body>
 </html>
