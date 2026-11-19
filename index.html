@@ -105,7 +105,7 @@ function renderManage(){
  var v=block('Lagerorte',S.locs,'l')+'<div class="row" style="margin-top:10px"><input id="nl" placeholder="Neuer Lagerort"><button class="btn" id="al" style="flex:0 0 auto">Hinzufügen</button></div>';
  v+=block('Kategorien',S.cats,'c')+'<div class="row" style="margin-top:10px"><input id="nc" placeholder="Neue Kategorie"><select id="nt"><option value="f">Lebensmittel</option><option value="n">Non-Food</option></select></div><button class="btn" id="ac" style="margin-top:8px;width:100%">Kategorie hinzufügen</button>';
  v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><label>E-Mail</label><input id="em" type="email" autocomplete="username" autocapitalize="off"><label>Passwort</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="tc" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p>');
- v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><p class="meta" style="margin-top:14px">Die Daten liegen nur in diesem Browser auf diesem Gerät und zu genau dieser Adresse. Sichere sie regelmäßig.</p>';
+ v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen nur in diesem Browser auf diesem Gerät und zu genau dieser Adresse. Sichere sie regelmäßig.</p>';
  $('view').innerHTML=v;
  $('al').onclick=function(){var x=$('nl').value.trim();if(x&&S.locs.indexOf(x)<0){S.locs.push(x);save();render()}};
  $('ac').onclick=function(){var x=$('nc').value.trim();if(x&&!S.cats.some(function(c){return c.n===x})){S.cats.push({n:x,t:$('nt').value});save();render()}};
@@ -115,6 +115,9 @@ function renderManage(){
   $('tc').onclick=go;$('pw').onkeydown=function(e){if(e.key==='Enter')go()}}
  if($('sn'))$('sn').onclick=function(){pull()};
  if($('sd'))$('sd').onclick=function(){if(confirm('Abmelden? Die Daten bleiben auf diesem Gerät und auf dem Server erhalten.')){saveSes(null);remoteUpd=null;setLinked(false);render();setSync('☁ nicht angemeldet')}};
+ $('cs').onclick=function(){$('csf').click()};
+ $('csf').onchange=function(){var f=this.files[0];this.value='';if(f)readCSV(f)};
+ $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;MHD;Allergene;Typ\r\nVollmilch 1 l;4001234567890;Milchprodukte;Kühlschrank;2;Packung;31.12.2026;Milch;Lebensmittel\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;;;Non-Food\r\n','text/csv')};
  $('ex').onclick=function(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
   a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
@@ -134,6 +137,63 @@ function openSheet(h){$('card').innerHTML=h;$('sheet').classList.add('open')}
 function closeSheet(){stopScan();$('sheet').classList.remove('open')}
 $('sheet').onclick=function(e){if(e.target===$('sheet'))closeSheet()};
 
+function dl(name,text,type){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function parseCSV(t){
+ t=t.replace(/^\uFEFF/,'');var first=(t.split(/\r?\n/)[0]||''),d=';',best=-1;
+ [';',',','\t'].forEach(function(x){var c=first.split(x).length;if(c>best){best=c;d=x}});
+ var rows=[],row=[],f='',q=false,i,c,add=function(){row.push(f);f='';if(row.some(function(x){return x.trim()}))rows.push(row);row=[]};
+ for(i=0;i<t.length;i++){c=t[i];
+  if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;
+  else if(c===d){row.push(f);f=''}
+  else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;add()}
+  else f+=c}
+ if(f!==''||row.length)add();
+ return rows}
+var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
+function parseDate(x){x=String(x||'').trim();var m,z=function(n){return('0'+n).slice(-2)};
+ if(m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+z(m[2])+'-'+z(m[3]);
+ if(m=x.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/))return(m[3].length===2?'20'+m[3]:m[3])+'-'+z(m[2])+'-'+z(m[1]);
+ return''}
+function readCSV(f){var r=new FileReader();r.onload=function(){
+ var txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(r.result)}catch(e){txt=new TextDecoder('windows-1252').decode(r.result)}
+ csvPreview(parseCSV(txt))};r.readAsArrayBuffer(f)}
+function csvPreview(rows){
+ if(rows.length<2){alert('Die Datei enthält keine Datenzeilen.');return}
+ var head=rows[0].map(function(h){return String(h).replace(/^\uFEFF/,'').trim().toLowerCase()}),col={};
+ Object.keys(HM).forEach(function(k){for(var i=0;i<head.length;i++)if(HM[k].indexOf(head[i])>-1){col[k]=i;break}});
+ if(col.name===undefined){alert('Keine Spalte „Name“ gefunden. Die erste Zeile muss Spaltenüberschriften enthalten, z. B. Name;Barcode;Kategorie;Lagerort;Menge. Nutze die CSV-Vorlage.');return}
+ var UN=['Stk','Packung','Flasche','Dose','g','kg','ml','l'],items=[],t0=Date.now();
+ var g=function(r,k){return col[k]===undefined?'':String(r[col[k]]==null?'':r[col[k]]).trim()};
+ rows.slice(1).forEach(function(r,ix){var n=g(r,'name');if(!n)return;
+  var q=parseFloat(g(r,'qty').replace(',','.')),u=g(r,'unit').toLowerCase(),un='Stk';
+  UN.forEach(function(x){if(x.toLowerCase()===u)un=x});
+  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:/non|nicht|haushalt|drogerie/i.test(g(r,'typ'))?'n':'f'})});
+ if(!items.length){alert('Keine Artikel mit Namen gefunden.');return}
+ var nc=[],nl=[],dup=0;
+ items.forEach(function(i){
+  if(!S.cats.some(function(c){return c.n===i.cat})&&nc.indexOf(i.cat)<0)nc.push(i.cat);
+  if(S.locs.indexOf(i.loc)<0&&nl.indexOf(i.loc)<0)nl.push(i.loc);
+  if(i.code&&S.items.some(function(x){return x.code===i.code}))dup++});
+ openSheet('<h2 style="margin:0">CSV importieren</h2><p>'+items.length+' Artikel gefunden.</p>'
+  +(nc.length?'<p class="meta">Neue Kategorien: '+esc(nc.join(', '))+'</p>':'')
+  +(nl.length?'<p class="meta">Neue Lagerorte: '+esc(nl.join(', '))+'</p>':'')
+  +'<p class="meta">Beispiele: '+esc(items.slice(0,4).map(function(i){return i.name}).join(', '))+(items.length>4?' …':'')+'</p>'
+  +(dup?'<label>'+dup+' Artikel haben einen Barcode, der schon im Bestand ist</label><select id="dm"><option value="add">Menge zum vorhandenen Artikel addieren</option><option value="skip">Überspringen</option><option value="new">Trotzdem als neuen Artikel anlegen</option></select>':'')
+  +'<div class="row" style="margin-top:18px"><button class="btn s" id="cx">Abbrechen</button><button class="btn" id="cok">Importieren</button></div>');
+ $('cx').onclick=closeSheet;
+ $('cok').onclick=function(){
+  var mode=$('dm')?$('dm').value:'new',added=0,merged=0,skipped=0;
+  nc.forEach(function(c){S.cats.push({n:c,t:items.filter(function(i){return i.cat===c})[0]._t})});
+  nl.forEach(function(l){S.locs.push(l)});
+  items.forEach(function(i){
+   var ex=i.code&&S.items.filter(function(x){return x.code===i.code})[0];
+   if(ex&&mode==='skip'){skipped++;return}
+   if(ex&&mode==='add'){ex.qty+=i.qty;merged++;return}
+   delete i._t;S.items.push(i);added++;
+   if(i.code)S.codes[i.code]={name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,img:'',all:i.all,tr:i.tr}});
+  save();closeSheet();render();
+  alert(added+' neu, '+merged+' zusammengeführt, '+skipped+' übersprungen.')}}
 var ALG={milk:'Milch',gluten:'Gluten',eggs:'Eier',nuts:'Schalenfrüchte',peanuts:'Erdnüsse',soybeans:'Soja',fish:'Fisch',crustaceans:'Krebstiere',molluscs:'Weichtiere',celery:'Sellerie',mustard:'Senf','sesame-seeds':'Sesam','sulphur-dioxide-and-sulphites':'Sulfite',lupin:'Lupinen'};
 function tagsDE(t){var o=[];(t||[]).forEach(function(x){var k=String(x).replace(/^[a-z]{2}:/,'');var n=ALG[k]||(k.charAt(0).toUpperCase()+k.slice(1).replace(/-/g,' '));if(o.indexOf(n)<0)o.push(n)});return o}
 function IMG(u,z){return(u&&/^(https:\/\/|data:image\/)/.test(u))?'<img class="thumb" style="width:'+z+'px;height:'+z+'px" src="'+esc(u)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':''}
