@@ -105,7 +105,7 @@ function renderManage(){
  var v=block('Lagerorte',S.locs,'l')+'<div class="row" style="margin-top:10px"><input id="nl" placeholder="Neuer Lagerort"><button class="btn" id="al" style="flex:0 0 auto">Hinzufügen</button></div>';
  v+=block('Kategorien',S.cats,'c')+'<div class="row" style="margin-top:10px"><input id="nc" placeholder="Neue Kategorie"><select id="nt"><option value="f">Lebensmittel</option><option value="n">Non-Food</option></select></div><button class="btn" id="ac" style="margin-top:8px;width:100%">Kategorie hinzufügen</button>';
  v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><label>E-Mail</label><input id="em" type="email" autocomplete="username" autocapitalize="off"><label>Passwort</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="tc" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p>');
- v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
+ v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Produktdaten</h3><p class=\"meta\">Holt fehlende Fotos und Allergene für alle Artikel mit Barcode.</p><button class=\"btn s\" id=\"pd\" style=\"width:100%\">Fehlende Fotos & Allergene abrufen</button><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
  $('view').innerHTML=v;
  $('al').onclick=function(){var x=$('nl').value.trim();if(x&&S.locs.indexOf(x)<0){S.locs.push(x);save();render()}};
  $('ac').onclick=function(){var x=$('nc').value.trim();if(x&&!S.cats.some(function(c){return c.n===x})){S.cats.push({n:x,t:$('nt').value});save();render()}};
@@ -115,6 +115,12 @@ function renderManage(){
   $('tc').onclick=go;$('pw').onkeydown=function(e){if(e.key==='Enter')go()}}
  if($('sn'))$('sn').onclick=function(){pull()};
  if($('sd'))$('sd').onclick=function(){if(confirm('Abmelden? Die Daten bleiben auf diesem Gerät und auf dem Server erhalten.')){saveSes(null);remoteUpd=null;setLinked(false);render();setSync('☁ nicht angemeldet')}};
+ $('pd').onclick=function(){
+  S.items.forEach(function(i){delete i.chk2});
+  $('pd').textContent='Läuft … Fortschritt oben in der Kopfzeile';
+  enrich().then(function(r){render();
+   if(!r){alert('Es gibt keine Artikel mit Barcode, bei denen etwas fehlt.');return}
+   alert(r.changed+' Angaben ergänzt.'+(r.bad?' '+r.bad+' Artikel konnten nicht abgerufen werden (Datenbank überlastet oder offline). Versuche es später noch einmal.':''))})};
  $('da').onclick=function(){
   var n=S.items.length;if(!n){alert('Der Bestand ist bereits leer.');return}
   if(!confirm('Alle '+n+' Artikel unwiderruflich löschen?\n\nKategorien und Lagerorte bleiben erhalten. Bei angemeldeter Synchronisation wird der Bestand auch auf dem Server und auf allen Geräten gelöscht.\n\nTipp: Exportiere vorher eine Sicherung.'))return;
@@ -212,19 +218,27 @@ function guessCat(tags,src){
  var t=tags.join(' ').toLowerCase();
  for(var i=0;i<MAP.length;i++)if(t.indexOf(MAP[i][0])>-1&&ok(MAP[i][1]))return MAP[i][1];
  return null}
+var GAP=800,lastReq=0;
+function throttle(){var w=Math.max(0,lastReq+GAP-Date.now());lastReq=Date.now()+w;return sleep(w)}
 function lookup(code){
  var i=0,net=0;
  function next(){
-  if(i>=SRC.length){NETFAIL=(net>=SRC.length);return Promise.resolve(null)}
-  var s=SRC[i++],ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},6000);
-  return fetch(s[0]+'/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_de,brands,quantity,categories_tags,image_front_small_url,allergens_tags,traces_tags',{signal:ctl.signal})
-   .then(function(r){return r.json()}).then(function(j){clearTimeout(t);
-    var p=j&&j.status===1&&j.product,n=p&&(p.product_name_de||p.product_name);
-    if(!n)return next();
-    var b=(p.brands||'').split(',')[0].trim(),name=(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n;
-    if(p.quantity)name+=' '+p.quantity;
-    return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:p.image_front_small_url||'',all:tagsDE(p.allergens_tags).join(', '),tr:tagsDE(p.traces_tags).join(', ')}})
-   .catch(function(){clearTimeout(t);net++;return next()})}
+  if(i>=SRC.length){NETFAIL=net>0;return Promise.resolve(null)}
+  var s=SRC[i++];
+  return throttle().then(function(){
+   var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},10000);
+   return fetch(s[0]+'/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_de,product_name_en,generic_name,brands,quantity,categories_tags,image_front_small_url,image_small_url,image_front_url,image_url,allergens_tags,traces_tags',{signal:ctl.signal})
+    .then(function(r){if(!r.ok&&r.status!==404)throw new Error('http '+r.status);return r.json()})
+    .then(function(j){clearTimeout(t);
+     var p=j&&j.status===1&&j.product;if(!p)return next();
+     var n=p.product_name_de||p.product_name||p.product_name_en||p.generic_name||'',
+      img=p.image_front_small_url||p.image_small_url||p.image_front_url||p.image_url||'',al=tagsDE(p.allergens_tags).join(', ');
+     if(!n&&!img&&!al)return next();
+     var b=(p.brands||'').split(',')[0].trim(),name=n?(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n:'';
+     if(n&&p.quantity)name+=' '+p.quantity;
+     NETFAIL=false;
+     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:img,all:al,tr:tagsDE(p.traces_tags).join(', ')}})
+    .catch(function(){clearTimeout(t);net++;return next()})})}
  return next()}
 
 function openForm(it,code){
@@ -242,7 +256,7 @@ function openForm(it,code){
  var curImg=it.img||'',noImg=!!it.noimg;
  $('fx').onclick=closeSheet;
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
- function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk:it.chk}}
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2}}
  function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=IMG(curImg,80)}if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
  $('fp').onclick=function(){$('fpf').click()};
  $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=''};
@@ -371,24 +385,28 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function enrich(){
  if(enriching)return Promise.resolve();
  var now=Date.now(),week=6048e5;
- var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&((!i.img&&!i.noimg)||!i.all)&&(!i.chk||now-i.chk>week)}).map(function(i){return i.id});
+ var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&((!i.img&&!i.noimg)||!i.all)&&(!i.chk2||now-i.chk2>week)}).map(function(i){return i.id});
  if(!ids.length)return Promise.resolve();
- enriching=true;var k=0,done=0,changed=0;
- function finish(){enriching=false;
-  if(done){save();render()}
-  setSync(NETFAIL&&done<ids.length?'Produktdaten: keine Verbindung':changed?'Produktdaten ergänzt: '+changed:(SES?'☁ Synchronisiert '+stamp():''))}
+ enriching=true;var k=0,done=0,changed=0,bad=0,streak=0;
+ function stats(){return{total:ids.length,done:done,changed:changed,bad:bad}}
+ function finish(){enriching=false;if(done){save();render()}
+  setSync(streak>=3?'Produktdaten: Datenbank nicht erreichbar, später erneut versuchen':bad?'Produktdaten: '+bad+' nicht abrufbar, nächster Versuch beim nächsten Öffnen':changed?'Produktdaten ergänzt: '+changed:(SES?'☁ Synchronisiert '+stamp():''));
+  return stats()}
  function step(){
-  if(k>=ids.length)return finish();
+  if(k>=ids.length||streak>=3)return finish();
   var id=ids[k++],it=find(id);if(!it)return step();
   setSync('Produktdaten '+k+'/'+ids.length);
   return lookup(it.code).then(function(r){
-   if(!r&&NETFAIL)return finish();
+   if(!r&&NETFAIL)return sleep(4000).then(function(){return lookup(it.code)});
+   return r}).then(function(r){
+   if(!r&&NETFAIL){bad++;streak++;return step()}
+   streak=0;
    var cur=find(id);
    if(cur){
     if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr}
-    cur.chk=Date.now();done++}
+    cur.chk2=Date.now();done++}
    if(done&&done%10===0){save();render()}
-   return sleep(300).then(step)})}
+   return step()})}
  return step()}
 function boot(){return(SES?pull():Promise.resolve()).then(enrich)}
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&!pushing)boot()});
