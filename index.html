@@ -105,7 +105,7 @@ function renderManage(){
  var v=block('Lagerorte',S.locs,'l')+'<div class="row" style="margin-top:10px"><input id="nl" placeholder="Neuer Lagerort"><button class="btn" id="al" style="flex:0 0 auto">Hinzufügen</button></div>';
  v+=block('Kategorien',S.cats,'c')+'<div class="row" style="margin-top:10px"><input id="nc" placeholder="Neue Kategorie"><select id="nt"><option value="f">Lebensmittel</option><option value="n">Non-Food</option></select></div><button class="btn" id="ac" style="margin-top:8px;width:100%">Kategorie hinzufügen</button>';
  v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><label>E-Mail</label><input id="em" type="email" autocomplete="username" autocapitalize="off"><label>Passwort</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="tc" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p>');
- v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen nur in diesem Browser auf diesem Gerät und zu genau dieser Adresse. Sichere sie regelmäßig.</p>';
+ v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
  $('view').innerHTML=v;
  $('al').onclick=function(){var x=$('nl').value.trim();if(x&&S.locs.indexOf(x)<0){S.locs.push(x);save();render()}};
  $('ac').onclick=function(){var x=$('nc').value.trim();if(x&&!S.cats.some(function(c){return c.n===x})){S.cats.push({n:x,t:$('nt').value});save();render()}};
@@ -115,6 +115,12 @@ function renderManage(){
   $('tc').onclick=go;$('pw').onkeydown=function(e){if(e.key==='Enter')go()}}
  if($('sn'))$('sn').onclick=function(){pull()};
  if($('sd'))$('sd').onclick=function(){if(confirm('Abmelden? Die Daten bleiben auf diesem Gerät und auf dem Server erhalten.')){saveSes(null);remoteUpd=null;setLinked(false);render();setSync('☁ nicht angemeldet')}};
+ $('da').onclick=function(){
+  var n=S.items.length;if(!n){alert('Der Bestand ist bereits leer.');return}
+  if(!confirm('Alle '+n+' Artikel unwiderruflich löschen?\n\nKategorien und Lagerorte bleiben erhalten. Bei angemeldeter Synchronisation wird der Bestand auch auf dem Server und auf allen Geräten gelöscht.\n\nTipp: Exportiere vorher eine Sicherung.'))return;
+  var a=prompt('Zur Bestätigung das Wort LÖSCHEN eingeben:');
+  if(!a||a.trim().toUpperCase()!=='LÖSCHEN')return;
+  S.items=[];save();render()};
  $('cs').onclick=function(){$('csf').click()};
  $('csf').onchange=function(){var f=this.files[0];this.value='';if(f)readCSV(f)};
  $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;MHD;Allergene;Typ\r\nVollmilch 1 l;4001234567890;Milchprodukte;Kühlschrank;2;Packung;31.12.2026;Milch;Lebensmittel\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;;;Non-Food\r\n','text/csv')};
@@ -207,9 +213,9 @@ function guessCat(tags,src){
  for(var i=0;i<MAP.length;i++)if(t.indexOf(MAP[i][0])>-1&&ok(MAP[i][1]))return MAP[i][1];
  return null}
 function lookup(code){
- var i=0;
+ var i=0,net=0;
  function next(){
-  if(i>=SRC.length)return Promise.resolve(null);
+  if(i>=SRC.length){NETFAIL=(net>=SRC.length);return Promise.resolve(null)}
   var s=SRC[i++],ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},6000);
   return fetch(s[0]+'/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_de,brands,quantity,categories_tags,image_front_small_url,allergens_tags,traces_tags',{signal:ctl.signal})
    .then(function(r){return r.json()}).then(function(j){clearTimeout(t);
@@ -218,7 +224,7 @@ function lookup(code){
     var b=(p.brands||'').split(',')[0].trim(),name=(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n;
     if(p.quantity)name+=' '+p.quantity;
     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:p.image_front_small_url||'',all:tagsDE(p.allergens_tags).join(', '),tr:tagsDE(p.traces_tags).join(', ')}})
-   .catch(function(){clearTimeout(t);return next()})}
+   .catch(function(){clearTimeout(t);net++;return next()})}
  return next()}
 
 function openForm(it,code){
@@ -233,17 +239,17 @@ function openForm(it,code){
  '<label>Mindesthaltbarkeit (optional)</label><input id="fe" type="date" value="'+esc(it.exp)+'">'+
  '<div class="row" style="margin-top:18px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>');
  openSheet(h);
- var curImg=it.img||'';
+ var curImg=it.img||'',noImg=!!it.noimg;
  $('fx').onclick=closeSheet;
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
- function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim()}}
- function setExtra(x){if(x.img){curImg=x.img;$('fph').innerHTML=IMG(curImg,80)}if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk:it.chk}}
+ function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=IMG(curImg,80)}if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
  $('fp').onclick=function(){$('fpf').click()};
- $('fpd').onclick=function(){curImg='';$('fph').innerHTML=''};
+ $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=''};
  $('fpf').onchange=function(){var f=this.files[0];this.value='';if(!f)return;var im=new Image(),u=URL.createObjectURL(f);
   im.onload=function(){var k=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
    var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
-   curImg=c.toDataURL('image/jpeg',0.65);$('fph').innerHTML=IMG(curImg,80);URL.revokeObjectURL(u)};
+   curImg=c.toDataURL('image/jpeg',0.65);noImg=false;$('fph').innerHTML=IMG(curImg,80);URL.revokeObjectURL(u)};
   im.onerror=function(){$('fst').textContent='Das Bild konnte nicht gelesen werden.'};im.src=u};
  $('fr').onclick=function(){var c=$('fc').value.trim(),st=$('fst');if(!c){st.textContent='Trage zuerst einen Barcode ein.';return}
   st.textContent='Suche Produktdaten …';
@@ -360,8 +366,33 @@ function pull(){
   if(lts>rts)return push();
   setLinked(true);setSync('☁ Synchronisiert '+stamp())
  }).catch(fail)}
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&SES&&!pushing)pull()});
-load();render();if(SES)pull();else setSync('☁ nicht angemeldet');
+var enriching=false,NETFAIL=false;
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function enrich(){
+ if(enriching)return Promise.resolve();
+ var now=Date.now(),week=6048e5;
+ var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&((!i.img&&!i.noimg)||!i.all)&&(!i.chk||now-i.chk>week)}).map(function(i){return i.id});
+ if(!ids.length)return Promise.resolve();
+ enriching=true;var k=0,done=0,changed=0;
+ function finish(){enriching=false;
+  if(done){save();render()}
+  setSync(NETFAIL&&done<ids.length?'Produktdaten: keine Verbindung':changed?'Produktdaten ergänzt: '+changed:(SES?'☁ Synchronisiert '+stamp():''))}
+ function step(){
+  if(k>=ids.length)return finish();
+  var id=ids[k++],it=find(id);if(!it)return step();
+  setSync('Produktdaten '+k+'/'+ids.length);
+  return lookup(it.code).then(function(r){
+   if(!r&&NETFAIL)return finish();
+   var cur=find(id);
+   if(cur){
+    if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr}
+    cur.chk=Date.now();done++}
+   if(done&&done%10===0){save();render()}
+   return sleep(300).then(step)})}
+ return step()}
+function boot(){return(SES?pull():Promise.resolve()).then(enrich)}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&!pushing)boot()});
+load();render();if(!SES)setSync('☁ nicht angemeldet');boot();
 </script>
 </body>
 </html>
