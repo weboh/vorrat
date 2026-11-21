@@ -89,7 +89,7 @@ function renderList(){
  L.forEach(function(i){
   var d=days(i.exp),e='';
   if(d!==null&&d<=7)e=' <span class="exp">'+(d<0?'abgelaufen':d===0?'heute':'noch '+d+' T.')+'</span>';
-  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+IMG(i.img,44)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b><span class="meta">'+esc(i.loc)+' · '+esc(i.cat)+(i.weight?' · '+esc(i.weight):'')+e+'</span>'+(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+(i.unit&&i.unit!=='Stk'?'<small class="meta"> '+esc(i.unit)+'</small>':'')+'</span><button data-p="'+i.id+'">+</button></div></div>'});
+  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+IMG(i.img,44)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b><span class="meta">'+esc(i.loc)+' · '+esc(i.cat)+(i.weight?' · '+esc(i.weight):'')+e+'</span>'+(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  $('view').innerHTML=v;
  var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
  $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
