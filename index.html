@@ -66,6 +66,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:14px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
 .item.nf{border-left-color:var(--nf)}
 .item .t{flex:1;min-width:0;cursor:pointer}.item b{display:block;overflow-wrap:anywhere;font-weight:700;font-size:16px}
+.item.shop b{overflow-wrap:break-word;word-break:normal}
 .item:not(.shop) b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
 .pw{position:relative;display:flex;cursor:pointer}
 .dot{position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--sf)}
@@ -319,8 +320,9 @@ function renderShop(){
  if(!L.length)v+='<div class="empty">Die Einkaufsliste ist leer. Beim Löschen eines Artikels kannst du ihn hier eintragen.</div>';
  L.forEach(function(x){
   v+='<div class="item shop'+(x.done?' done':'')+'"><button class="chk" data-c="'+x.id+'" aria-label="abhaken">'+(x.done?'✓':'')+'</button>'+TH(x)
-   +'<div class="t"><b>'+esc(x.name)+'</b><span class="meta" style="display:block;margin-top:3px">'+catChip(x.cat)+(x.weight?' '+esc(x.weight):'')+'</span></div>'
-   +'<div class="qty"><button data-sm="'+x.id+'">−</button><span>'+x.qty+'</span><button data-sp="'+x.id+'">+</button></div><button class="rm" data-r="'+x.id+'" aria-label="entfernen">✕</button></div>'});
+   +'<div class="t"><b>'+esc(x.name)+'</b><span class="meta" style="display:block;margin-top:3px">'+catChip(x.cat)+(x.weight?' '+esc(x.weight):'')+'</span>'
+   +'<div class="qty" style="margin-top:8px"><button data-sm="'+x.id+'">−</button><span>'+x.qty+'</span><button data-sp="'+x.id+'">+</button></div></div>'
+   +'<button class="rm" data-r="'+x.id+'" aria-label="entfernen">✕</button></div>'});
  if(L.length){
   v+='<div style="margin-top:14px">';
   if(nd)v+='<button class="btn" id="sbuy" style="width:100%">Gekaufte in den Bestand übernehmen ('+nd+')</button><button class="btn s" id="sclr" style="width:100%;margin-top:8px">Abgehakte von der Liste entfernen</button>';
@@ -381,10 +383,10 @@ function openForm(it,code){
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var h='<div class="fm"><div class="fhead"><div id="fph">'+PH(it.img)+'</div><div class="fbtn"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden>'
  +'<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch">'
+ +'<div class="row"><div style="flex:3"><label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+'</option>'}).join('')+'</select></div><div style="flex:2"><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div></div>'
  +'<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'],it.unit)+'</select></div></div>'
  +'<label>Füllstand</label><div class="seg" id="flv"><button type="button" data-v="25">Niedrig<small>25 %</small></button><button type="button" data-v="50">Halb<small>50 %</small></button><button type="button" data-v="100">Voll<small>100 %</small></button></div>'
  +'<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:4px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:6px">Foto & Allergene abrufen</button>'
- +'<div class="row"><div><label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+'</option>'}).join('')+'</select></div><div><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div></div>'
  +'<div class="row"><div><label>Gewicht / Inhalt</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g"></div><div><label>Haltbar bis</label><input id="fe" type="date" value="'+esc(it.exp)+'"></div></div>'
  +'<label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:4px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'
  +'<label>Anmerkung (optional)</label><textarea id="fno" rows="2" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'
