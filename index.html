@@ -68,6 +68,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .item .t{flex:1;min-width:0;cursor:pointer}.item b{display:block;overflow-wrap:anywhere;font-weight:700;font-size:16px}
 .item.shop b{overflow-wrap:break-word;word-break:normal}
 .item:not(.shop) b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.t .cat{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
 .pw{position:relative;display:flex;cursor:pointer}
 .dot{position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--sf)}
 .dot.r{background:var(--bad)}.dot.o{background:var(--lo)}.dot.y{background:var(--mid)}
@@ -142,7 +143,7 @@ function renderList(){
  L.forEach(function(i){
   var dt=dotOf(i);
   v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'"><div class="pw" data-e="'+i.id+'">'+TH(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
-   +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b></div>'
+   +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'+(i.cat?'<span class="meta" style="display:block;margin-top:3px">'+catChip(i.cat)+'</span>':'')+'</div>'
    +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  $('view').innerHTML=v;
  var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
