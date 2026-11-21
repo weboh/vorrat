@@ -36,7 +36,7 @@ h1{font-size:26px;font-weight:800;margin:18px 0 2px;letter-spacing:-.02em}
 textarea{resize:vertical}
 input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--ink);font:16px Figtree,system-ui,sans-serif}
 label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 4px}
-.row{display:flex;gap:8px}.row>*{flex:1}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:10px;padding:8px 4px;font:700 15px Figtree,system-ui,sans-serif;line-height:1.25;cursor:pointer}
 .seg button small{display:block;font-weight:400;font-size:12px;color:var(--mut)}
@@ -49,12 +49,19 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--ln);background:var(--sf);color:var(--acd);font-weight:800;cursor:pointer;flex:none;padding:0}
 .item.done .chk{background:var(--ac);border-color:var(--ac)}
 .rm{background:none;border:0;color:var(--mut);font-size:18px;cursor:pointer;padding:6px}
-.ph{width:130px;height:130px;border-radius:14px;border:1px dashed var(--ln);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;background:var(--sf)}
+.ph{width:84px;height:84px;border-radius:14px;border:1px dashed var(--ln);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;background:var(--sf)}
 .dzg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .dz{border:2px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:12px;padding:8px;cursor:pointer;font:600 14px Figtree,system-ui,sans-serif;text-align:left;display:flex;align-items:center;gap:10px}
 .dz.on{border-color:var(--ac)}
 .dz i{width:38px;height:38px;border-radius:10px;flex:none;border:1px solid rgba(0,0,0,.15);position:relative}
 .dz i::after{content:"";position:absolute;right:5px;bottom:5px;width:11px;height:11px;border-radius:50%;background:var(--dot)}
+.fm label{margin:9px 0 3px;font-size:12px}
+.fm input,.fm select,.fm textarea{padding:7px 10px;border-radius:9px}
+.fm .btn{padding:8px 12px;font-size:14px;border-radius:10px}
+.fm .fhead{display:flex;gap:12px;align-items:center}
+.fm .fbtn{flex:1;display:flex;flex-direction:column;gap:6px}
+.fm .seg button{padding:5px 4px;font-size:14px}.fm .seg button small{font-size:11px}
+.fm .meta{font-size:11px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}.chips .chip{white-space:nowrap;padding:6px 12px}
 .item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:14px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
 .item.nf{border-left-color:var(--nf)}
@@ -79,7 +86,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .fab .btn{flex:1;padding:8px 10px;font-size:14px;border-radius:10px}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .sheet.open{display:flex}
-.card{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+.card{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px))}
 video{width:100%;border-radius:12px;background:#000;max-height:40vh}
 .thumb{width:56px;height:56px;object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--ln);flex:none}
 .empty{text-align:center;color:var(--mut);padding:36px 10px}
@@ -346,7 +353,7 @@ function guessCat(tags,src){
  var t=tags.join(' ').toLowerCase();
  for(var i=0;i<MAP.length;i++)if(t.indexOf(MAP[i][0])>-1&&ok(MAP[i][1]))return MAP[i][1];
  return null}
-function PH(u){return IMG(u,130)||'<div class="ph">Kein Foto</div>'}
+function PH(u){return IMG(u,84)||'<div class="ph">Kein Foto</div>'}
 var GAP=800,lastReq=0;
 function throttle(){var w=Math.max(0,lastReq+GAP-Date.now());lastReq=Date.now()+w;return sleep(w)}
 function lookup(code){
@@ -372,19 +379,16 @@ function lookup(code){
 function openForm(it,code){
  var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',note:'',lvl:100,img:'',all:'',tr:''};
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
- var h='<div id="fph" style="display:flex;justify-content:center">'+PH(it.img)+'</div>'
- +'<div class="row" style="margin-top:8px"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden>'
+ var h='<div class="fm"><div class="fhead"><div id="fph">'+PH(it.img)+'</div><div class="fbtn"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden>'
  +'<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch">'
  +'<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'],it.unit)+'</select></div></div>'
  +'<label>Füllstand</label><div class="seg" id="flv"><button type="button" data-v="25">Niedrig<small>25 %</small></button><button type="button" data-v="50">Halb<small>50 %</small></button><button type="button" data-v="100">Voll<small>100 %</small></button></div>'
- +'<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:6px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:8px">Foto & Allergene abrufen</button>'
- +'<label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+' ('+(c.t==='f'?'Lebensmittel':'Non-Food')+')</option>'}).join('')+'</select>'
- +'<label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select>'
- +'<label>Gewicht / Inhalt (optional)</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g oder 1 l">'
- +'<label>Mindesthaltbarkeit (optional)</label><input id="fe" type="date" value="'+esc(it.exp)+'">'
- +'<label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:6px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'
- +'<label>Anmerkung (optional)</label><textarea id="fno" rows="3" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'
- +'<div class="row" style="margin-top:18px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>');
+ +'<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:4px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:6px">Foto & Allergene abrufen</button>'
+ +'<div class="row"><div><label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+'</option>'}).join('')+'</select></div><div><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div></div>'
+ +'<div class="row"><div><label>Gewicht / Inhalt</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g"></div><div><label>Haltbar bis</label><input id="fe" type="date" value="'+esc(it.exp)+'"></div></div>'
+ +'<label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:4px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'
+ +'<label>Anmerkung (optional)</label><textarea id="fno" rows="2" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'
+ +'<div class="row" style="margin-top:14px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>')+'</div>';
  openSheet(h);
  var curImg=it.img||'',noImg=!!it.noimg,curLvl=it.lvl||100;
  function showLvl(){$('flv').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',+b.dataset.v===curLvl)})}
