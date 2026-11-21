@@ -23,6 +23,17 @@ textarea{resize:vertical}
 input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--ink);font:16px Figtree,system-ui,sans-serif}
 label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 4px}
 .row{display:flex;gap:8px}.row>*{flex:1}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:10px;padding:8px 4px;font:700 15px Figtree,system-ui,sans-serif;line-height:1.25;cursor:pointer}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--mut)}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg button.on small{color:inherit;opacity:.8}
+.seg button.on[data-v="25"]{background:var(--warn);border-color:var(--warn);color:var(--acd)}
+.seg button.on[data-v="100"]{background:var(--ac);border-color:var(--ac);color:var(--acd)}
+.item.shop{border-left-color:var(--mut)}.item.done b{text-decoration:line-through;color:var(--mut)}.item.done{opacity:.7}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--ln);background:var(--sf);color:var(--acd);font-weight:800;cursor:pointer;flex:none;padding:0}
+.item.done .chk{background:var(--ac);border-color:var(--ac)}
+.rm{background:none;border:0;color:var(--mut);font-size:18px;cursor:pointer;padding:6px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}.chips .chip{white-space:nowrap;padding:6px 12px}
 .item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:12px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;gap:10px}
 .item.nf{border-left-color:var(--nf)}
@@ -61,7 +72,7 @@ var zx=null,KEY='vorrat-v1',S,flt={type:'',loc:'',cat:'',q:''},tab='bestand',str
 function def(){return{locs:['Kühlschrank','Gefrierfach','Vorratsschrank','Keller','Badezimmer','Putzschrank'],
 cats:[['Milchprodukte','f'],['Obst & Gemüse','f'],['Fleisch & Fisch','f'],['Getränke','f'],['Konserven','f'],['Backen & Grundzutaten','f'],['Putzmittel','n'],['Drogerie','n'],['Hygiene','n']].map(function(c){return{n:c[0],t:c[1]}}),
 items:[],codes:{}}}
-function load(){try{var r=localStorage.getItem(KEY);S=r?JSON.parse(r):def()}catch(e){S=def()}}
+function load(){try{var r=localStorage.getItem(KEY);S=r?JSON.parse(r):def()}catch(e){S=def()}S.shop=S.shop||[];S.codes=S.codes||{}}
 function lsSave(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Speicher voll – die letzte Änderung konnte nicht gespeichert werden. Exportiere eine Sicherung und entferne einige eigene Fotos.')}}
 function save(){S.ts=Date.now();lsSave();schedulePush()}
 function $(i){return document.getElementById(i)}
@@ -72,10 +83,10 @@ function days(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-ne
 function render(){
  var n=S.items.length,f=S.items.filter(function(i){return catT(i.cat)==='f'}).length;
  $('sum').textContent=n+' Artikel · '+f+' Lebensmittel · '+(n-f)+' Non-Food';
- $('tabs').innerHTML=['bestand','ordnung','tools'].map(function(t){return '<button class="'+(tab===t?'on':'')+'" data-t="'+t+'">'+({bestand:'Bestand',ordnung:'Orte & Kategorien',tools:'Einstellungen'})[t]+'</button>'}).join('');
+ $('tabs').innerHTML=['bestand','shop','ordnung','tools'].map(function(t){return '<button class="'+(tab===t?'on':'')+'" data-t="'+t+'">'+({bestand:'Bestand',shop:'Einkaufsliste'+(S.shop.length?' ('+S.shop.length+')':''),ordnung:'Orte & Kategorien',tools:'Einstellungen'})[t]+'</button>'}).join('');
  $('tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){tab=b.dataset.t;render()}});
  document.querySelector('.fab').style.display=tab==='bestand'?'flex':'none';
- tab==='bestand'?renderList():tab==='tools'?renderTools():renderManage();
+ tab==='bestand'?renderList():tab==='shop'?renderShop():tab==='tools'?renderTools():renderManage();
 }
 function chipRow(key,opts){return '<div class="chips">'+opts.map(function(o){return '<button class="chip '+(flt[key]===o[0]?'on':'')+'" data-k="'+key+'" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'}).join('')+'</div>'}
 function renderList(){
@@ -96,7 +107,7 @@ function renderList(){
  var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
  $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
  $('view').querySelectorAll('[data-e]').forEach(function(b){b.onclick=function(){openForm(find(b.dataset.e))}});
- $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);if(i.qty===0&&confirm('„'+i.name+'“ ist leer. Aus dem Bestand entfernen?'))S.items=S.items.filter(function(x){return x!==i});save();render()}});
+ $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);save();render();if(i.qty===0)askDelete(i,true)}});
  $('view').querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){find(b.dataset.p).qty++;save();render()}});
 }
 function find(id){return S.items.filter(function(i){return i.id===id})[0]}
@@ -141,14 +152,14 @@ function renderTools(){
   S.items=[];save();render()};
  $('cs').onclick=function(){$('csf').click()};
  $('csf').onchange=function(){var f=this.files[0];this.value='';if(f)readCSV(f)};
- $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;Gewicht;MHD;Allergene;Typ;Anmerkung\r\nVollmilch;4001234567890;Milchprodukte;Kühlschrank;2;Packung;1 l;31.12.2026;Milch;Lebensmittel;Bio-Qualität\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;500 ml;;;Non-Food;\r\n','text/csv')};
+ $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;Gewicht;MHD;Allergene;Typ;Anmerkung;Füllstand\r\nVollmilch;4001234567890;Milchprodukte;Kühlschrank;2;Packung;1 l;31.12.2026;Milch;Lebensmittel;Bio-Qualität;100\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;500 ml;;;Non-Food;;50\r\n','text/csv')};
  $('ex').onclick=function(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
   a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
  $('im').onclick=function(){$('imf').click()};
  $('imf').onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();
   r.onload=function(){try{var o=JSON.parse(r.result);if(!Array.isArray(o.locs)||!Array.isArray(o.cats)||!Array.isArray(o.items))throw 0;
-   if(confirm('Aktuellen Bestand durch die Sicherung ersetzen ('+o.items.length+' Artikel)?')){o.codes=o.codes||{};S=o;save();render()}}
+   if(confirm('Aktuellen Bestand durch die Sicherung ersetzen ('+o.items.length+' Artikel)?')){o.codes=o.codes||{};o.shop=o.shop||[];S=o;save();render()}}
    catch(e){alert('Diese Datei ist keine gültige Vorrats-Sicherung.')}};r.readAsText(f)};
 }
 
@@ -169,11 +180,15 @@ function parseCSV(t){
   else f+=c}
  if(f!==''||row.length)add();
  return rows}
-var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],note:['anmerkung','notiz','bemerkung','kommentar','note'],weight:['gewicht','inhalt','füllmenge','fuellmenge','packungsgröße','packungsgroesse','netto','weight'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
+var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],lvl:['füllstand','fuellstand','level'],note:['anmerkung','notiz','bemerkung','kommentar','note'],weight:['gewicht','inhalt','füllmenge','fuellmenge','packungsgröße','packungsgroesse','netto','weight'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
 function parseDate(x){x=String(x||'').trim();var m,z=function(n){return('0'+n).slice(-2)};
  if(m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+z(m[2])+'-'+z(m[3]);
  if(m=x.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/))return(m[3].length===2?'20'+m[3]:m[3])+'-'+z(m[2])+'-'+z(m[1]);
  return''}
+function parseLvl(x){x=String(x||'').trim().toLowerCase();if(!x)return 100;
+ if(/niedrig|low|wenig/.test(x))return 25;if(/halb|half|mittel/.test(x))return 50;if(/voll|full/.test(x))return 100;
+ var n=parseFloat(x.replace(',','.').replace('%',''));if(isNaN(n))return 100;
+ return[25,50,100].reduce(function(b,c){return Math.abs(c-n)<Math.abs(b-n)?c:b})}
 function readCSV(f){var r=new FileReader();r.onload=function(){
  var txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(r.result)}catch(e){txt=new TextDecoder('windows-1252').decode(r.result)}
  csvPreview(parseCSV(txt))};r.readAsArrayBuffer(f)}
@@ -187,7 +202,7 @@ function csvPreview(rows){
  rows.slice(1).forEach(function(r,ix){var n=g(r,'name');if(!n)return;
   var q=parseFloat(g(r,'qty').replace(',','.')),u=g(r,'unit').toLowerCase(),un='Stk';
   UN.forEach(function(x){if(x.toLowerCase()===u)un=x});
-  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,weight:g(r,'weight'),note:g(r,'note'),exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:/non|nicht|haushalt|drogerie/i.test(g(r,'typ'))?'n':'f'})});
+  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,weight:g(r,'weight'),note:g(r,'note'),lvl:parseLvl(g(r,'lvl')),exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:/non|nicht|haushalt|drogerie/i.test(g(r,'typ'))?'n':'f'})});
  if(!items.length){alert('Keine Artikel mit Namen gefunden.');return}
  var nc=[],nl=[],dup=0;
  items.forEach(function(i){
@@ -213,6 +228,60 @@ function csvPreview(rows){
    if(i.code)S.codes[i.code]={name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,img:'',all:i.all,tr:i.tr,wt:i.weight}});
   save();closeSheet();render();
   alert(added+' neu, '+merged+' zusammengeführt, '+skipped+' übersprungen.')}}
+function addShop(it){
+ if(S.shop.some(function(x){return x.code&&it.code?x.code===it.code:x.name.toLowerCase()===String(it.name).toLowerCase()}))return false;
+ S.shop.push({id:'s'+Date.now()+Math.floor(Math.random()*1e4),name:it.name,code:it.code||'',cat:it.cat||'',loc:it.loc||'',qty:1,unit:it.unit||'Stk',weight:it.weight||'',note:it.note||'',img:it.img||'',all:it.all||'',tr:it.tr||'',done:false});
+ return true}
+function removeItem(it,toShop){
+ if(toShop)addShop(it);
+ S.items=S.items.filter(function(x){return x.id!==it.id});save();closeSheet();render()}
+function askDelete(it,empty){
+ var st=find(it.id)||it;
+ openSheet('<h2 style="margin:0 0 6px">„'+esc(st.name)+'“ '+(empty?'ist leer':'löschen')+'</h2><p class="meta">Soll der Artikel auf die Einkaufsliste?</p>'
+  +'<button class="btn" id="d1" style="width:100%;margin-top:12px">Löschen und zur Einkaufsliste</button>'
+  +'<button class="btn d" id="d2" style="width:100%;margin-top:8px">Nur löschen</button>'
+  +'<button class="btn s" id="d3" style="width:100%;margin-top:8px">'+(empty?'Behalten':'Abbrechen')+'</button>');
+ $('d1').onclick=function(){removeItem(st,true)};
+ $('d2').onclick=function(){removeItem(st,false)};
+ $('d3').onclick=function(){if(empty)closeSheet();else openForm(st)}}
+function shopToStock(){
+ var got=S.shop.filter(function(x){return x.done});if(!got.length)return;
+ var added=0,merged=0;
+ got.forEach(function(x,k){
+  var ex=(x.code&&S.items.filter(function(i){return i.code===x.code})[0])||S.items.filter(function(i){return i.name.toLowerCase()===x.name.toLowerCase()})[0];
+  if(ex){ex.qty=(+ex.qty||0)+x.qty;ex.lvl=100;merged++}
+  else{S.items.push({id:'i'+Date.now()+'_'+k,name:x.name,code:x.code||'',cat:S.cats.some(function(c){return c.n===x.cat})?x.cat:S.cats[0].n,loc:S.locs.indexOf(x.loc)>-1?x.loc:S.locs[0],qty:x.qty,unit:x.unit||'Stk',exp:'',weight:x.weight||'',note:x.note||'',lvl:100,img:x.img||'',all:x.all||'',tr:x.tr||''});added++}});
+ S.shop=S.shop.filter(function(x){return !x.done});save();render();
+ alert(added+' neu im Bestand, '+merged+' vorhandene Artikel aufgefüllt.')}
+function renderShop(){
+ var L=S.shop.slice().sort(function(a,b){return((a.done?1:0)-(b.done?1:0))||a.name.localeCompare(b.name,'de',{sensitivity:'base',numeric:true})});
+ var nd=S.shop.filter(function(x){return x.done}).length;
+ var v='<div class="row"><input id="sni" placeholder="Artikel zur Liste hinzufügen"><button class="btn" id="sa" style="flex:0 0 auto">Hinzufügen</button></div>';
+ if(!L.length)v+='<div class="empty">Die Einkaufsliste ist leer. Beim Löschen eines Artikels kannst du ihn hier eintragen.</div>';
+ L.forEach(function(x){
+  v+='<div class="item shop'+(x.done?' done':'')+'"><button class="chk" data-c="'+x.id+'" aria-label="abhaken">'+(x.done?'✓':'')+'</button>'+IMG(x.img,44)
+   +'<div class="t"><b>'+esc(x.name)+'</b><span class="meta">'+esc([x.weight,x.cat].filter(Boolean).join(' · '))+'</span></div>'
+   +'<div class="qty"><button data-sm="'+x.id+'">−</button><span>'+x.qty+'</span><button data-sp="'+x.id+'">+</button></div><button class="rm" data-r="'+x.id+'" aria-label="entfernen">✕</button></div>'});
+ if(L.length){
+  v+='<div style="margin-top:14px">';
+  if(nd)v+='<button class="btn" id="sbuy" style="width:100%">Gekaufte in den Bestand übernehmen ('+nd+')</button><button class="btn s" id="sclr" style="width:100%;margin-top:8px">Abgehakte von der Liste entfernen</button>';
+  v+='<button class="btn s" id="ssh" style="width:100%;margin-top:8px">Liste teilen oder kopieren</button></div>'}
+ $('view').innerHTML=v;
+ var add=function(){var n=$('sni').value.trim();if(!n)return;if(!addShop({name:n}))alert('„'+n+'“ steht schon auf der Liste.');save();render()};
+ $('sa').onclick=add;$('sni').onkeydown=function(e){if(e.key==='Enter')add()};
+ var fs=function(id){return S.shop.filter(function(x){return x.id===id})[0]};
+ $('view').querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){var x=fs(b.dataset.c);x.done=!x.done;save();render()}});
+ $('view').querySelectorAll('[data-sm]').forEach(function(b){b.onclick=function(){var x=fs(b.dataset.sm);x.qty=Math.max(1,x.qty-1);save();render()}});
+ $('view').querySelectorAll('[data-sp]').forEach(function(b){b.onclick=function(){fs(b.dataset.sp).qty++;save();render()}});
+ $('view').querySelectorAll('[data-r]').forEach(function(b){b.onclick=function(){S.shop=S.shop.filter(function(x){return x.id!==b.dataset.r});save();render()}});
+ if($('sbuy'))$('sbuy').onclick=function(){if(confirm(nd+' gekaufte Artikel in den Bestand übernehmen?'))shopToStock()};
+ if($('sclr'))$('sclr').onclick=function(){S.shop=S.shop.filter(function(x){return !x.done});save();render()};
+ if($('ssh'))$('ssh').onclick=function(){
+  var t=S.shop.filter(function(x){return !x.done}).map(function(x){return '• '+(x.qty>1?x.qty+'× ':'')+x.name+(x.weight?' ('+x.weight+')':'')}).join('\n');
+  if(!t){alert('Alle Artikel sind abgehakt.');return}
+  if(navigator.share)navigator.share({title:'Einkaufsliste',text:t}).catch(function(){});
+  else if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert('Liste kopiert.')});
+  else alert(t)}}
 var ALG={milk:'Milch',gluten:'Gluten',eggs:'Eier',nuts:'Schalenfrüchte',peanuts:'Erdnüsse',soybeans:'Soja',fish:'Fisch',crustaceans:'Krebstiere',molluscs:'Weichtiere',celery:'Sellerie',mustard:'Senf','sesame-seeds':'Sesam','sulphur-dioxide-and-sulphites':'Sulfite',lupin:'Lupinen'};
 function tagsDE(t){var o=[];(t||[]).forEach(function(x){var k=String(x).replace(/^[a-z]{2}:/,'');var n=ALG[k]||(k.charAt(0).toUpperCase()+k.slice(1).replace(/-/g,' '));if(o.indexOf(n)<0)o.push(n)});return o}
 function IMG(u,z){return(u&&/^(https:\/\/|data:image\/)/.test(u))?'<img class="thumb" style="width:'+z+'px;height:'+z+'px" src="'+esc(u)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':''}
@@ -248,7 +317,7 @@ function lookup(code){
  return next()}
 
 function openForm(it,code){
- var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',note:'',img:'',all:'',tr:''};
+ var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',note:'',lvl:100,img:'',all:'',tr:''};
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var h='<h2 style="margin:0">'+(n?'Artikel hinzufügen':'Artikel bearbeiten')+'</h2>'+
  '<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch 1 l">'+
@@ -256,15 +325,18 @@ function openForm(it,code){
  '<label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+' ('+(c.t==='f'?'Lebensmittel':'Non-Food')+')</option>'}).join('')+'</select>'+
  '<label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select>'+
  '<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'],it.unit)+'</select></div></div>'+
+ '<label>Füllstand</label><div class="seg" id="flv"><button type="button" data-v="25">Niedrig<small>25 %</small></button><button type="button" data-v="50">Halb<small>50 %</small></button><button type="button" data-v="100">Voll<small>100 %</small></button></div>'+
  '<label>Gewicht / Inhalt (optional)</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g oder 1 l">'+
  '<label>Mindesthaltbarkeit (optional)</label><input id="fe" type="date" value="'+esc(it.exp)+'">'+
  '<label>Anmerkung (optional)</label><textarea id="fno" rows="3" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'+
  '<div class="row" style="margin-top:18px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>');
  openSheet(h);
- var curImg=it.img||'',noImg=!!it.noimg;
+ var curImg=it.img||'',noImg=!!it.noimg,curLvl=it.lvl||100;
+ function showLvl(){$('flv').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',+b.dataset.v===curLvl)})}
+ $('flv').querySelectorAll('button').forEach(function(b){b.onclick=function(){curLvl=+b.dataset.v;showLvl()}});showLvl();
  $('fx').onclick=closeSheet;
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
- function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),note:$('fno').value.trim(),img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2}}
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),note:$('fno').value.trim(),lvl:curLvl,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2}}
  function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=IMG(curImg,80)}if(x.wt&&!$('fw').value)$('fw').value=x.wt;if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
  $('fp').onclick=function(){$('fpf').click()};
  $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=''};
@@ -292,7 +364,7 @@ function openForm(it,code){
   if(n){d.id='i'+Date.now();S.items.push(d)}else{S.items[S.items.indexOf(find(it.id))]=d}
   if(d.code)S.codes[d.code]={name:d.name,cat:d.cat,loc:d.loc,unit:d.unit,img:/^https:/.test(d.img||'')?d.img:'',all:d.all,tr:d.tr,wt:d.weight};
   save();closeSheet();render()};
- if($('fdel'))$('fdel').onclick=function(){if(confirm('Artikel löschen?')){S.items=S.items.filter(function(x){return x.id!==it.id});save();closeSheet();render()}};
+ if($('fdel'))$('fdel').onclick=function(){askDelete(it)};
 }
 
 function stopScan(){if(zx){try{zx.reset()}catch(e){}zx=null}
@@ -357,7 +429,7 @@ function getTok(){
  return sbFetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:SES.rt})}).then(function(j){setFromTok(j);return SES.at},function(e){if(e.status>=400&&e.status<500)e.status=401;throw e})}
 function sbData(path,opt){return getTok().then(function(t){return sbFetch(path,opt,t)})}
 function remoteGet(){return sbData('/rest/v1/vorrat?select=daten,updated_at&user_id=eq.'+SES.uid).then(function(a){return a&&a.length?{upd:a[0].updated_at,data:a[0].daten}:null})}
-function adopt(d){d.codes=d.codes||{};S=d;lsSave();render()}
+function adopt(d){d.codes=d.codes||{};d.shop=d.shop||[];S=d;lsSave();render()}
 function schedulePush(){if(!SES)return;clearTimeout(ptimer);ptimer=setTimeout(function(){push()},1500)}
 function push(n){
  n=n||0;if(!SES)return Promise.resolve();
