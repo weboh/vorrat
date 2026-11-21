@@ -56,9 +56,9 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .dz i{width:38px;height:38px;border-radius:10px;flex:none;border:1px solid rgba(0,0,0,.15);position:relative}
 .dz i::after{content:"";position:absolute;right:5px;bottom:5px;width:11px;height:11px;border-radius:50%;background:var(--dot)}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}.chips .chip{white-space:nowrap;padding:6px 12px}
-.item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:14px;padding:12px;margin:10px 0;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
+.item{background:var(--sf);border:1px solid var(--ln);border-left:5px solid var(--ac);border-radius:14px;padding:10px 12px;margin:8px 0;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
 .item.nf{border-left-color:var(--nf)}
-.item .t{flex:1;min-width:0;cursor:pointer}.item b{display:block;overflow-wrap:anywhere;font-weight:700}
+.item .t{flex:1;min-width:0;cursor:pointer}.item b{display:block;overflow-wrap:anywhere;font-weight:700;font-size:16px}
 .rc{display:flex;flex-direction:column;align-items:center}
 .lv{display:flex;gap:3px;margin-top:7px}.lv i{width:16px;height:6px;border-radius:3px;background:var(--ln)}
 .lv.hi i.f{background:var(--ok)}.lv.mid i.f{background:var(--mid)}.lv.lo i.f{background:var(--lo)}
@@ -71,8 +71,8 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .qty span{min-width:28px;text-align:center;font-weight:800}
 .btn{border:0;border-radius:12px;padding:12px 16px;font:700 16px Figtree,system-ui,sans-serif;background:var(--ac);color:var(--acd);cursor:pointer}
 .btn.s{background:var(--sf);color:var(--ink);border:1px solid var(--ln)}.btn.d{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
-.fab{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;max-width:640px;margin:0 auto}
-.fab .btn{flex:1}
+.fab{position:fixed;left:0;right:0;bottom:0;padding:7px 14px calc(7px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;max-width:640px;margin:0 auto}
+.fab .btn{flex:1;padding:8px 10px;font-size:14px;border-radius:10px}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .sheet.open{display:flex}
 .card{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
@@ -127,12 +127,9 @@ function renderList(){
  }).sort(function(a,b){return a.name.localeCompare(b.name,'de',{sensitivity:'base',numeric:true})});
  if(!L.length)v+='<div class="empty">'+(S.items.length?'Keine Treffer.':'Noch nichts erfasst. Scanne einen Barcode oder füge einen Artikel manuell hinzu.')+'</div>';
  L.forEach(function(i){
-  var d=days(i.exp),e='';
-  if(d!==null&&d<=7)e='<span class="exp '+(d<0?'e1':d<=3?'e2':'e3')+'">'+(d<0?'abgelaufen':d===0?'heute':'noch '+d+' T.')+'</span>';
-  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+TH(i)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'
-   +'<span class="meta" style="display:block;margin-top:3px">'+catChip(i.cat)+' '+esc(i.loc)+(i.weight?' · '+esc(i.weight):'')+e+'</span>'
-   +(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div>'
-   +'<div class="rc"><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div>'+lvBar(i.lvl)+'</div></div>'});
+  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'"><div data-e="'+i.id+'" style="cursor:pointer;display:flex">'+TH(i)+'</div>'
+   +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b></div>'
+   +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  $('view').innerHTML=v;
  var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
  $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
