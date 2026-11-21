@@ -84,12 +84,12 @@ function renderList(){
  var L=S.items.filter(function(i){
   var q=flt.q.toLowerCase();
   return (!flt.type||catT(i.cat)===flt.type)&&(!flt.loc||i.loc===flt.loc)&&(!flt.cat||i.cat===flt.cat)&&(!q||i.name.toLowerCase().indexOf(q)>-1||(i.code||'').indexOf(q)>-1||(i.all||'').toLowerCase().indexOf(q)>-1)
- }).sort(function(a,b){var x=a.exp||'9999',y=b.exp||'9999';return x<y?-1:x>y?1:a.name.localeCompare(b.name)});
+ }).sort(function(a,b){return a.name.localeCompare(b.name,'de',{sensitivity:'base',numeric:true})});
  if(!L.length)v+='<div class="empty">'+(S.items.length?'Keine Treffer.':'Noch nichts erfasst. Scanne einen Barcode oder füge einen Artikel manuell hinzu.')+'</div>';
  L.forEach(function(i){
   var d=days(i.exp),e='';
   if(d!==null&&d<=7)e=' <span class="exp">'+(d<0?'abgelaufen':d===0?'heute':'noch '+d+' T.')+'</span>';
-  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+IMG(i.img,44)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b><span class="meta">'+esc(i.loc)+' · '+esc(i.cat)+e+'</span>'+(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+(i.unit&&i.unit!=='Stk'?'<small class="meta"> '+esc(i.unit)+'</small>':'')+'</span><button data-p="'+i.id+'">+</button></div></div>'});
+  v+='<div class="item '+(catT(i.cat)==='n'?'nf':'')+'">'+IMG(i.img,44)+'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b><span class="meta">'+esc(i.loc)+' · '+esc(i.cat)+(i.weight?' · '+esc(i.weight):'')+e+'</span>'+(i.all?'<span class="meta" style="display:block">Allergene: '+esc(i.all)+'</span>':'')+'</div><div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+(i.unit&&i.unit!=='Stk'?'<small class="meta"> '+esc(i.unit)+'</small>':'')+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  $('view').innerHTML=v;
  var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
  $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
@@ -129,7 +129,7 @@ function renderManage(){
   S.items=[];save();render()};
  $('cs').onclick=function(){$('csf').click()};
  $('csf').onchange=function(){var f=this.files[0];this.value='';if(f)readCSV(f)};
- $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;MHD;Allergene;Typ\r\nVollmilch 1 l;4001234567890;Milchprodukte;Kühlschrank;2;Packung;31.12.2026;Milch;Lebensmittel\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;;;Non-Food\r\n','text/csv')};
+ $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;Gewicht;MHD;Allergene;Typ\r\nVollmilch;4001234567890;Milchprodukte;Kühlschrank;2;Packung;1 l;31.12.2026;Milch;Lebensmittel\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;500 ml;;;Non-Food\r\n','text/csv')};
  $('ex').onclick=function(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
   a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
@@ -162,7 +162,7 @@ function parseCSV(t){
   else f+=c}
  if(f!==''||row.length)add();
  return rows}
-var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
+var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],weight:['gewicht','inhalt','füllmenge','fuellmenge','packungsgröße','packungsgroesse','netto','weight'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
 function parseDate(x){x=String(x||'').trim();var m,z=function(n){return('0'+n).slice(-2)};
  if(m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+z(m[2])+'-'+z(m[3]);
  if(m=x.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/))return(m[3].length===2?'20'+m[3]:m[3])+'-'+z(m[2])+'-'+z(m[1]);
@@ -180,7 +180,7 @@ function csvPreview(rows){
  rows.slice(1).forEach(function(r,ix){var n=g(r,'name');if(!n)return;
   var q=parseFloat(g(r,'qty').replace(',','.')),u=g(r,'unit').toLowerCase(),un='Stk';
   UN.forEach(function(x){if(x.toLowerCase()===u)un=x});
-  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:/non|nicht|haushalt|drogerie/i.test(g(r,'typ'))?'n':'f'})});
+  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,weight:g(r,'weight'),exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:/non|nicht|haushalt|drogerie/i.test(g(r,'typ'))?'n':'f'})});
  if(!items.length){alert('Keine Artikel mit Namen gefunden.');return}
  var nc=[],nl=[],dup=0;
  items.forEach(function(i){
@@ -203,7 +203,7 @@ function csvPreview(rows){
    if(ex&&mode==='skip'){skipped++;return}
    if(ex&&mode==='add'){ex.qty+=i.qty;merged++;return}
    delete i._t;S.items.push(i);added++;
-   if(i.code)S.codes[i.code]={name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,img:'',all:i.all,tr:i.tr}});
+   if(i.code)S.codes[i.code]={name:i.name,cat:i.cat,loc:i.loc,unit:i.unit,img:'',all:i.all,tr:i.tr,wt:i.weight}});
   save();closeSheet();render();
   alert(added+' neu, '+merged+' zusammengeführt, '+skipped+' übersprungen.')}}
 var ALG={milk:'Milch',gluten:'Gluten',eggs:'Eier',nuts:'Schalenfrüchte',peanuts:'Erdnüsse',soybeans:'Soja',fish:'Fisch',crustaceans:'Krebstiere',molluscs:'Weichtiere',celery:'Sellerie',mustard:'Senf','sesame-seeds':'Sesam','sulphur-dioxide-and-sulphites':'Sulfite',lupin:'Lupinen'};
@@ -235,14 +235,13 @@ function lookup(code){
       img=p.image_front_small_url||p.image_small_url||p.image_front_url||p.image_url||'',al=tagsDE(p.allergens_tags).join(', ');
      if(!n&&!img&&!al)return next();
      var b=(p.brands||'').split(',')[0].trim(),name=n?(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n:'';
-     if(n&&p.quantity)name+=' '+p.quantity;
      NETFAIL=false;
-     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:img,all:al,tr:tagsDE(p.traces_tags).join(', ')}})
+     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:img,all:al,tr:tagsDE(p.traces_tags).join(', '),wt:(p.quantity||'').trim()}})
     .catch(function(){clearTimeout(t);net++;return next()})})}
  return next()}
 
 function openForm(it,code){
- var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',img:'',all:'',tr:''};
+ var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||S.cats[0].n,loc:flt.loc||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',img:'',all:'',tr:''};
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var h='<h2 style="margin:0">'+(n?'Artikel hinzufügen':'Artikel bearbeiten')+'</h2>'+
  '<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch 1 l">'+
@@ -250,14 +249,15 @@ function openForm(it,code){
  '<label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+' ('+(c.t==='f'?'Lebensmittel':'Non-Food')+')</option>'}).join('')+'</select>'+
  '<label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select>'+
  '<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'],it.unit)+'</select></div></div>'+
+ '<label>Gewicht / Inhalt (optional)</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g oder 1 l">'+
  '<label>Mindesthaltbarkeit (optional)</label><input id="fe" type="date" value="'+esc(it.exp)+'">'+
  '<div class="row" style="margin-top:18px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>');
  openSheet(h);
  var curImg=it.img||'',noImg=!!it.noimg;
  $('fx').onclick=closeSheet;
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
- function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2}}
- function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=IMG(curImg,80)}if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2}}
+ function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=IMG(curImg,80)}if(x.wt&&!$('fw').value)$('fw').value=x.wt;if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
  $('fp').onclick=function(){$('fpf').click()};
  $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=''};
  $('fpf').onchange=function(){var f=this.files[0];this.value='';if(!f)return;var im=new Image(),u=URL.createObjectURL(f);
@@ -282,7 +282,7 @@ function openForm(it,code){
  if(it.code&&!it.name)fill(it.code);
  $('fok').onclick=function(){var d=snap();d.name=d.name.trim();d.code=d.code.trim();if(!d.name){$('fn').focus();return}
   if(n){d.id='i'+Date.now();S.items.push(d)}else{S.items[S.items.indexOf(find(it.id))]=d}
-  if(d.code)S.codes[d.code]={name:d.name,cat:d.cat,loc:d.loc,unit:d.unit,img:/^https:/.test(d.img||'')?d.img:'',all:d.all,tr:d.tr};
+  if(d.code)S.codes[d.code]={name:d.name,cat:d.cat,loc:d.loc,unit:d.unit,img:/^https:/.test(d.img||'')?d.img:'',all:d.all,tr:d.tr,wt:d.weight};
   save();closeSheet();render()};
  if($('fdel'))$('fdel').onclick=function(){if(confirm('Artikel löschen?')){S.items=S.items.filter(function(x){return x.id!==it.id});save();closeSheet();render()}};
 }
@@ -385,7 +385,7 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function enrich(){
  if(enriching)return Promise.resolve();
  var now=Date.now(),week=6048e5;
- var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&((!i.img&&!i.noimg)||!i.all)&&(!i.chk2||now-i.chk2>week)}).map(function(i){return i.id});
+ var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&((!i.img&&!i.noimg)||!i.all||!i.weight)&&(!i.chk2||now-i.chk2>week)}).map(function(i){return i.id});
  if(!ids.length)return Promise.resolve();
  enriching=true;var k=0,done=0,changed=0,bad=0,streak=0;
  function stats(){return{total:ids.length,done:done,changed:changed,bad:bad}}
@@ -403,7 +403,7 @@ function enrich(){
    streak=0;
    var cur=find(id);
    if(cur){
-    if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr}
+    if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.weight&&r.wt){cur.weight=r.wt;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr}
     cur.chk2=Date.now();done++}
    if(done&&done%10===0){save();render()}
    return step()})}
