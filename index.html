@@ -123,9 +123,9 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .btn.s{background:var(--sf);color:var(--ink);border:1px solid var(--ln)}.btn.d{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
 .fab{position:fixed;left:0;right:0;bottom:0;padding:7px 14px calc(7px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;max-width:640px;margin:0 auto}
 .fab .btn{flex:1;padding:8px 10px;font-size:14px;border-radius:10px}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet.open{display:flex}
-.card{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.card{background:var(--bg);width:100%;max-width:640px;max-height:calc(100% - env(safe-area-inset-top,0px) - 56px);overflow:auto;overscroll-behavior:contain;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px))}
 video{width:100%;border-radius:12px;background:#000;max-height:40vh}
 .thumb{width:44px;height:44px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid var(--ln);flex:none}
 .empty{text-align:center;color:var(--mut);padding:36px 10px}
