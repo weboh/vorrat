@@ -25,8 +25,22 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 *{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background-color:var(--bg);background-image:var(--bgi);background-size:var(--bgs);background-attachment:fixed;min-height:100vh;color:var(--ink);font:16px/1.4 Figtree,system-ui,sans-serif;padding-bottom:90px}
 main{max-width:640px;margin:0 auto;padding:0 14px}
-h1{font-size:26px;font-weight:800;margin:18px 0 2px;letter-spacing:-.02em}
-.sub{color:var(--mut);font-size:14px;margin:0 0 12px}
+h1{font-size:22px;font-weight:800;margin:0;letter-spacing:-.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:var(--mut);font-size:14px;margin:10px 0 6px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:25;background:var(--bg);background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.hd.sc{box-shadow:0 1px 0 var(--ln),0 6px 14px rgba(0,0,0,.06)}
+.hdi{position:relative;max-width:640px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:8px}
+.ib{width:40px;height:40px;border-radius:50%;border:1px solid var(--ln);background:var(--sf);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;font-size:16px}
+#bm{position:relative}
+#bm[data-n]::after{content:attr(data-n);position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--ac);color:var(--acd);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.sbw{display:none;flex:1;align-items:center;gap:8px;min-width:0}.sbw.on{display:flex}.sbw input{flex:1;min-width:0}
+.hdi.so h1,.hdi.so #bs{display:none}
+.menu{display:none;position:absolute;right:14px;top:100%;margin-top:2px;min-width:230px;background:var(--sf);border:1px solid var(--ln);border-radius:14px;box-shadow:var(--sh);padding:6px;z-index:40}
+.menu.on{display:block}
+.menu button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;color:var(--ink);font:600 15px Figtree,system-ui,sans-serif;padding:11px 12px;border-radius:9px;cursor:pointer}
+.menu button.on{background:var(--ac);color:var(--acd)}
+.menu button.on .bdg{background:var(--acd);color:var(--ac)}
 .tabs{display:flex;gap:6px;margin:10px 0}
 .tabs{overflow-x:auto}.tabs button{white-space:nowrap}
 .tabs button,.chip{border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:99px;padding:8px 13px;font:600 14px Figtree,system-ui,sans-serif;cursor:pointer}
@@ -98,10 +112,15 @@ video{width:100%;border-radius:12px;background:#000;max-height:40vh}
 </style>
 </head>
 <body>
+<header class="hd" id="hd"><div class="hdi" id="hdi">
+<h1 id="ht">Vorrat</h1>
+<div class="sbw" id="sbw"><input id="q" type="search" placeholder="Name, Barcode, Anmerkung …" autocomplete="off"><button class="ib" id="sx2" aria-label="Suche schließen">✕</button></div>
+<button class="ib" id="bs" aria-label="Suche"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+<button class="ib" id="bm" aria-label="Menü"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+<div class="menu" id="mn"></div>
+</div></header>
 <main>
-<h1>Vorrat</h1>
 <p class="sub"><span id="sum"></span> <span id="hs"></span></p>
-<div class="tabs" id="tabs"></div>
 <div id="view"></div>
 </main>
 <div class="fab"><button class="btn s" id="bScan">Scannen</button><button class="btn" id="bAdd">Manuell hinzufügen</button></div>
@@ -123,14 +142,18 @@ function days(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-ne
 function render(){
  var n=S.items.length,f=S.items.filter(function(i){return catT(i.cat)==='f'}).length;
  $('sum').textContent=n+' Artikel · '+f+' Lebensmittel · '+(n-f)+' Non-Food';
- $('tabs').innerHTML=['bestand','shop','ordnung','tools'].map(function(t){return '<button class="'+(tab===t?'on':'')+'" data-t="'+t+'">'+({bestand:'Bestand',shop:'Einkaufsliste'+(S.shop.length?'<span class="bdg">'+S.shop.length+'</span>':''),ordnung:'Orte & Kategorien',tools:'Einstellungen'})[t]+'</button>'}).join('');
- $('tabs').querySelectorAll('button').forEach(function(b){b.onclick=function(){tab=b.dataset.t;render()}});
+ var T=[['bestand','Bestand'],['shop','Einkaufsliste'],['ordnung','Orte & Kategorien'],['tools','Einstellungen']];
+ $('ht').textContent=({bestand:'Vorrat',shop:'Einkaufsliste',ordnung:'Orte & Kategorien',tools:'Einstellungen'})[tab];
+ $('mn').innerHTML=T.map(function(t){return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'"><span>'+t[1]+'</span>'+(t[0]==='shop'&&S.shop.length?'<span class="bdg">'+S.shop.length+'</span>':'')+'</button>'}).join('');
+ $('mn').querySelectorAll('button').forEach(function(b){b.onclick=function(){go(b.dataset.t)}});
+ if(S.shop.length)$('bm').setAttribute('data-n',S.shop.length);else $('bm').removeAttribute('data-n');
+ $('bs').style.display=tab==='bestand'?'':'none';
  document.querySelector('.fab').style.display=tab==='bestand'?'flex':'none';
  tab==='bestand'?renderList():tab==='shop'?renderShop():tab==='tools'?renderTools():renderManage();
 }
 function chipRow(key,opts){return '<div class="chips">'+opts.map(function(o){return '<button class="chip '+(flt[key]===o[0]?'on':'')+'" data-k="'+key+'" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'}).join('')+'</div>'}
 function renderList(){
- var v='<input id="q" type="search" placeholder="Suchen (Name oder Barcode)" value="'+esc(flt.q)+'">';
+ var v='';
  v+=chipRow('st',[['','Alle Status'],['exp','Bald ablaufend ('+S.items.filter(soon).length+')'],['low','Niedrig ('+S.items.filter(low).length+')']]);
  v+=chipRow('type',[['','Alle'],['f','Lebensmittel'],['n','Non-Food']]);
  v+=chipRow('loc',[['','Alle Orte']].concat(S.locs.map(function(l){return[l,l]})));
@@ -146,7 +169,6 @@ function renderList(){
    +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'+(i.cat?'<span class="meta" style="display:block;margin-top:3px">'+catChip(i.cat)+'</span>':'')+'</div>'
    +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  $('view').innerHTML=v;
- var q=$('q');q.oninput=function(){flt.q=q.value;var p=q.selectionStart;renderList();var n=$('q');n.focus();n.setSelectionRange(p,p)};
  $('view').querySelectorAll('.chip').forEach(function(b){b.onclick=function(){flt[b.dataset.k]=b.dataset.v;if(b.dataset.k==='type')flt.cat='';renderList()}});
  $('view').querySelectorAll('[data-e]').forEach(function(b){b.onclick=function(){openForm(find(b.dataset.e))}});
  $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);save();render();if(i.qty===0)askDelete(i,true)}});
@@ -552,6 +574,15 @@ function enrich(){
  return step()}
 function boot(){return(SES?pull():Promise.resolve()).then(enrich)}
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&!pushing)boot()});
+function openSearch(){$('sbw').classList.add('on');$('hdi').classList.add('so');$('q').focus()}
+function closeSearch(){$('sbw').classList.remove('on');$('hdi').classList.remove('so');$('q').value='';if(flt.q){flt.q='';if(tab==='bestand')renderList()}}
+function go(t){$('mn').classList.remove('on');if(t!=='bestand')closeSearch();tab=t;if(window.scrollTo)window.scrollTo(0,0);render()}
+$('bs').onclick=openSearch;$('sx2').onclick=closeSearch;
+$('q').oninput=function(){flt.q=this.value;if(tab==='bestand')renderList()};
+$('q').onkeydown=function(e){if(e.key==='Enter')this.blur()};
+$('bm').onclick=function(e){e.stopPropagation();$('mn').classList.toggle('on')};
+document.addEventListener('click',function(e){var m=$('mn');if(m.classList.contains('on')&&!m.contains(e.target))m.classList.remove('on')});
+if(window.addEventListener)window.addEventListener('scroll',function(){$('hd').classList.toggle('sc',window.scrollY>4)},{passive:true});
 load();render();if(!SES)setSync('☁ nicht angemeldet');boot();
 </script>
 </body>
