@@ -200,14 +200,13 @@ function setDesign(k){try{k==='salbei'?localStorage.removeItem('vorrat-design'):
  if(k==='salbei')document.documentElement.removeAttribute('data-design');else document.documentElement.setAttribute('data-design',k)}
 function renderTools(){
  var v='<h3>Design</h3><div class="dzg">'+DESIGNS.map(function(d){return '<button class="dz'+(curDesign()===d[0]?' on':'')+'" data-z="'+d[0]+'"><i style="'+d[2]+';--dot:'+d[3]+'"></i>'+esc(d[1])+'</button>'}).join('')+'</div><p class="meta">Das Design gilt nur für dieses Gerät. Hell und Dunkel folgen deiner Systemeinstellung, die Kreidetafel ist immer dunkel.</p>';
- v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><label>E-Mail</label><input id="em" type="email" autocomplete="username" autocapitalize="off"><label>Passwort</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="tc" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p>');
+ v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><form id="lf" method="post"><label>E-Mail</label><input id="em" name="email" type="email" autocomplete="username" autocapitalize="off" autocorrect="off"><label>Passwort</label><input id="pw" name="password" type="password" autocomplete="current-password"><button class="btn" id="tc" type="submit" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p></form>');
  v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Produktdaten</h3><p class=\"meta\">Holt fehlende Fotos und Allergene für alle Artikel mit Barcode.</p><button class=\"btn s\" id=\"pd\" style=\"width:100%\">Fehlende Fotos & Allergene abrufen</button><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
  $('view').innerHTML=v;
 $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){setDesign(b.dataset.z);render()}});
  if($('tc')){
-  var go=function(){var em=$('em').value.trim(),pw=$('pw').value;if(!em||!pw)return;$('lm').textContent='';
-   signIn(em,pw).then(function(){render();pull()}).catch(function(e){$('lm').textContent=errMsg(e)})};
-  $('tc').onclick=go;$('pw').onkeydown=function(e){if(e.key==='Enter')go()}}
+  $('lf').onsubmit=function(e){e.preventDefault();var em=$('em').value.trim(),pw=$('pw').value;if(!em||!pw)return;$('lm').textContent='';
+   signIn(em,pw).then(function(){render();pull()}).catch(function(x){$('lm').textContent=errMsg(x)})}}
  if($('sn'))$('sn').onclick=function(){pull()};
  if($('sd'))$('sd').onclick=function(){if(confirm('Abmelden? Die Daten bleiben auf diesem Gerät und auf dem Server erhalten.')){saveSes(null);remoteUpd=null;setLinked(false);render();setSync('☁ nicht angemeldet')}};
  $('pd').onclick=function(){
@@ -497,7 +496,7 @@ function isLinked(){try{return localStorage.getItem('vorrat-linked')==='1'}catch
 function setLinked(v){try{v?localStorage.setItem('vorrat-linked','1'):localStorage.removeItem('vorrat-linked')}catch(e){}}
 function setSync(t){SYNC=t;var a=$('syncst'),b=$('hs');if(a)a.textContent=t;if(b)b.textContent=t?'· '+t:''}
 function errMsg(e){return e.status?(e.status===401?'Bitte neu anmelden':e.message):'Keine Verbindung – Änderungen bleiben lokal gespeichert'}
-function fail(e){if(e.status===401&&SES){saveSes(null)}setSync('⚠ '+errMsg(e))}
+function fail(e){if(e.auth&&SES){saveSes(null)}setSync('⚠ '+errMsg(e))}
 function stamp(){return new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}
 function sbFetch(path,opt,tok){
  opt=opt||{};var h=opt.headers||{};h.apikey=KEYP;if(tok)h.Authorization='Bearer '+tok;if(opt.body)h['Content-Type']='application/json';
@@ -510,11 +509,19 @@ function sbFetch(path,opt,tok){
    var e=new Error(m);e.status=r.status;throw e})})}
 function setFromTok(j){saveSes({at:j.access_token,rt:j.refresh_token,exp:Math.floor(Date.now()/1000)+(j.expires_in||3600),uid:j.user.id,email:j.user.email});return SES}
 function signIn(em,pw){return sbFetch('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:em,password:pw})}).then(setFromTok)}
+var refreshing=null;
 function getTok(){
- if(!SES){var e=new Error('Nicht angemeldet');e.status=401;return Promise.reject(e)}
+ if(!SES){var e0=new Error('Nicht angemeldet');e0.status=401;e0.auth=true;return Promise.reject(e0)}
  if(SES.exp-60>Date.now()/1000)return Promise.resolve(SES.at);
- return sbFetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:SES.rt})}).then(function(j){setFromTok(j);return SES.at},function(e){if(e.status>=400&&e.status<500)e.status=401;throw e})}
-function sbData(path,opt){return getTok().then(function(t){return sbFetch(path,opt,t)})}
+ if(refreshing)return refreshing;
+ var rt=SES.rt;
+ refreshing=sbFetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:rt})}).then(function(j){refreshing=null;setFromTok(j);return SES.at},
+  function(e){refreshing=null;if(e.status===400||e.status===401||e.status===403){e.status=401;e.auth=true}throw e});
+ return refreshing}
+function sbData(path,opt,retry){return getTok().then(function(t){return sbFetch(path,opt,t)}).catch(function(e){
+ if(e.status===401&&!e.auth&&!retry&&SES){SES.exp=0;return sbData(path,opt,true)}
+ if(e.status===401&&retry)e.auth=true;
+ throw e})}
 function remoteGet(){return sbData('/rest/v1/vorrat?select=daten,updated_at&user_id=eq.'+SES.uid).then(function(a){return a&&a.length?{upd:a[0].updated_at,data:a[0].daten}:null})}
 function adopt(d){d.codes=d.codes||{};d.shop=d.shop||[];S=d;lsSave();render()}
 function schedulePush(){if(!SES)return;clearTimeout(ptimer);ptimer=setTimeout(function(){push()},1500)}
@@ -598,6 +605,7 @@ $('q').onkeydown=function(e){if(e.key==='Enter')this.blur()};
 $('bm').onclick=function(e){e.stopPropagation();$('mn').classList.toggle('on')};
 document.addEventListener('click',function(e){var m=$('mn');if(m.classList.contains('on')&&!m.contains(e.target))m.classList.remove('on')});
 if(window.addEventListener)window.addEventListener('scroll',function(){$('hd').classList.toggle('sc',window.scrollY>4)},{passive:true});
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 load();render();if(!SES)setSync('☁ nicht angemeldet');boot();
 </script>
 </body>
