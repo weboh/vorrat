@@ -455,18 +455,22 @@ function lookup(code){
 function openForm(it,code){
  var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||topOf('cat')||S.cats[0].n,loc:flt.loc||topOf('loc')||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',note:'',lvl:100,img:'',all:'',tr:''};
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
+ var ty0=catT(it.cat),catOpts=function(t,cur){var l=S.cats.filter(function(c){return c.t===t}).map(function(c){return c.n});if(cur&&l.indexOf(cur)<0)l.unshift(cur);return l.map(function(x){return '<option value="'+esc(x)+'"'+(x===cur?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var h='<div class="fm"><div class="fhead"><div id="fph">'+PH(it.img)+'</div><div class="fbtn"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden>'
  +'<label>Name</label><input id="fn" value="'+esc(it.name)+'" placeholder="z. B. Vollmilch">'
- +'<div class="row"><div style="flex:3"><label>Kategorie</label><select id="fk">'+S.cats.map(function(c){return '<option value="'+esc(c.n)+'"'+(c.n===it.cat?' selected':'')+'>'+esc(c.n)+'</option>'}).join('')+'</select></div><div style="flex:2"><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div></div>'
+ +'<div class="row"><div style="flex:2"><label>Typ</label><select id="fty">'+TYPES.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===ty0?' selected':'')+'>'+t[1]+'</option>'}).join('')+'</select></div><div style="flex:3"><label>Kategorie</label><select id="fk">'+catOpts(ty0,it.cat)+'</select></div></div>'
  +'<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'].sort(cmp),it.unit)+'</select></div></div>'
  +'<label>Füllstand</label><div class="seg" id="flv"><button type="button" data-v="25">Niedrig<small>25 %</small></button><button type="button" data-v="50">Halb<small>50 %</small></button><button type="button" data-v="100">Voll<small>100 %</small></button></div>'
  +'<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:4px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:6px">Foto & Allergene abrufen</button>'
- +'<div class="row"><div><label>Gewicht / Inhalt</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g"></div><div><label>Haltbar bis</label><input id="fe" type="date" value="'+esc(it.exp)+'"></div></div>'
+ +'<div class="row"><div><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div><div><label>Gewicht / Inhalt</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g"></div></div>'
+ +'<div class="row"><div><label>Haltbar bis</label><input id="fe" type="date" value="'+esc(it.exp)+'"></div>'+(n?'':'<div><label>Zuletzt geändert</label><input id="fmod" value="'+esc(fmtMod(it.mod))+'" readonly tabindex="-1" style="color:var(--mut)"></div>')+'</div>'
  +'<label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:4px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'
  +'<label>Anmerkung (optional)</label><textarea id="fno" rows="2" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'
- +(n?'':'<label>Zuletzt geändert</label><input id="fmod" value="'+esc(fmtMod(it.mod))+'" readonly tabindex="-1" style="color:var(--mut)">')
  +'</div><div class="fbar"><div class="row"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:6px">Artikel löschen</button>')+'</div>';
  openSheet(h,'fcard');
+ $('fty').onchange=function(){var t=this.value;
+  if(!S.cats.some(function(c){return c.t===t})){this.value=catT($('fk').value);alert('Für diesen Typ gibt es noch keine Kategorie. Lege sie unter „Orte & Kategorien“ an.');return}
+  $('fk').innerHTML=catOpts(t,'')};
  var curImg=it.img||'',noImg=!!it.noimg,curLvl=it.lvl||100;
  function showLvl(){$('flv').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',+b.dataset.v===curLvl)})}
  $('flv').querySelectorAll('button').forEach(function(b){b.onclick=function(){curLvl=+b.dataset.v;showLvl()}});showLvl();
