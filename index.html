@@ -84,6 +84,10 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .dz.on{border-color:var(--ac)}
 .dz i{width:38px;height:38px;border-radius:10px;flex:none;border:1px solid rgba(0,0,0,.15);position:relative}
 .dz i::after{content:"";position:absolute;right:5px;bottom:5px;width:11px;height:11px;border-radius:50%;background:var(--dot)}
+.fcard{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.fcard .fm{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:12px 14px 8px}
+.fbar{flex:none;padding:8px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--ln);background:var(--bg)}
+.fbar .btn{padding:8px 12px;font-size:14px;border-radius:10px}
 .fm label{margin:9px 0 3px;font-size:12px}
 .fm input,.fm select,.fm textarea{padding:7px 10px;border-radius:9px}
 .fm .btn{padding:8px 12px;font-size:14px;border-radius:10px}
@@ -272,7 +276,7 @@ $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){
    catch(e){alert('Diese Datei ist keine gültige Vorrats-Sicherung.')}};r.readAsText(f)};
 }
 
-function openSheet(h){$('card').innerHTML=h;$('sheet').classList.add('open')}
+function openSheet(h,cls){$('card').className='card'+(cls?' '+cls:'');$('card').innerHTML=h;$('card').scrollTop=0;$('sheet').classList.add('open')}
 function closeSheet(){stopScan();$('sheet').classList.remove('open')}
 $('sheet').onclick=function(e){if(e.target===$('sheet'))closeSheet()};
 
@@ -461,8 +465,8 @@ function openForm(it,code){
  +'<label>Allergene</label><input id="fa" value="'+esc(it.all)+'" placeholder="z. B. Milch, Gluten"><label>Kann Spuren enthalten</label><input id="ft" value="'+esc(it.tr)+'"><p class="meta" style="margin:4px 0 0">Angaben aus der Datenbank ohne Gewähr. Bei Allergien im Zweifel die Packung prüfen.</p>'
  +'<label>Anmerkung (optional)</label><textarea id="fno" rows="2" placeholder="z. B. Lieblingssorte, nur für Gäste …">'+esc(it.note)+'</textarea>'
  +(n?'':'<label>Zuletzt geändert</label><input id="fmod" value="'+esc(fmtMod(it.mod))+'" readonly tabindex="-1" style="color:var(--mut)">')
- +'<div class="row" style="margin-top:14px"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:8px">Artikel löschen</button>')+'</div>';
- openSheet(h);
+ +'</div><div class="fbar"><div class="row"><button class="btn s" id="fx">Abbrechen</button><button class="btn" id="fok">Speichern</button></div>'+(n?'':'<button class="btn d" id="fdel" style="width:100%;margin-top:6px">Artikel löschen</button>')+'</div>';
+ openSheet(h,'fcard');
  var curImg=it.img||'',noImg=!!it.noimg,curLvl=it.lvl||100;
  function showLvl(){$('flv').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',+b.dataset.v===curLvl)})}
  $('flv').querySelectorAll('button').forEach(function(b){b.onclick=function(){curLvl=+b.dataset.v;showLvl()}});showLvl();
