@@ -199,7 +199,7 @@ function renderList(){
  var v='';
  var L=S.items.filter(function(i){
   var q=flt.q.toLowerCase();
-  return (!flt.type||catT(i.cat)===flt.type)&&(!flt.loc||i.loc===flt.loc)&&(!flt.cat||i.cat===flt.cat)&&(!flt.st||(flt.st==='exp'?soon(i):low(i)))&&(!q||i.name.toLowerCase().indexOf(q)>-1||(i.code||'').indexOf(q)>-1||(i.all||'').toLowerCase().indexOf(q)>-1||(i.note||'').toLowerCase().indexOf(q)>-1)
+  return (!flt.type||catT(i.cat)===flt.type)&&(!flt.loc||i.loc===flt.loc)&&(!flt.cat||i.cat===flt.cat)&&(!flt.st||(flt.st==='exp'?soon(i):low(i)))&&(!q||i.name.toLowerCase().indexOf(q)>-1||(i.code||'').indexOf(q)>-1||(i.all||'').toLowerCase().indexOf(q)>-1||(i.note||'').toLowerCase().indexOf(q)>-1||(i.brand||'').toLowerCase().indexOf(q)>-1)
  }).sort(function(a,b){return a.name.localeCompare(b.name,'de',{sensitivity:'base',numeric:true})});
  if(!L.length)v+='<div class="empty">'+(S.items.length?'Keine Treffer.':'Noch nichts erfasst. Scanne einen Barcode oder füge einen Artikel manuell hinzu.')+'</div>';
  if(VM==='grid')v+='<div class="grid">';
@@ -210,7 +210,7 @@ function renderList(){
     +'<div class="tn" data-e="'+i.id+'">'+esc(i.name)+'</div>'
     +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>';return}
   v+='<div class="item '+tcls(i.cat)+'"><div class="pw" data-e="'+i.id+'">'+TH(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
-   +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'+(i.cat?'<span class="meta" style="display:block;margin-top:3px">'+catChip(i.cat)+'</span>':'')+'</div>'
+   +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'+(i.cat||i.brand?'<span class="meta" style="display:block;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+catChip(i.cat)+(i.brand?(i.cat?' · ':'')+esc(i.brand):'')+'</span>':'')+'</div>'
    +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  if(VM==='grid')v+='</div>';
  $('view').innerHTML=v;
@@ -243,7 +243,7 @@ function setDesign(k){try{k==='salbei'?localStorage.removeItem('vorrat-design'):
 function renderTools(){
  var v='<h3>Design</h3><div class="dzg">'+DESIGNS.map(function(d){return '<button class="dz'+(curDesign()===d[0]?' on':'')+'" data-z="'+d[0]+'"><i style="'+d[2]+';--dot:'+d[3]+'"></i>'+esc(d[1])+'</button>'}).join('')+'</div><p class="meta">Das Design gilt nur für dieses Gerät. Hell und Dunkel folgen deiner Systemeinstellung, die Kreidetafel ist immer dunkel.</p>';
  v+='<h3>Konto & Synchronisation</h3>'+(SES?'<p class="meta">Angemeldet als '+esc(SES.email)+'</p><p class="meta" id="syncst">'+esc(SYNC||'Verbunden')+'</p><div class="row"><button class="btn s" id="sn">Jetzt synchronisieren</button><button class="btn d" id="sd">Abmelden</button></div>':'<p class="meta">Melde dich an, damit der Bestand auf allen Geräten gleich ist.</p><form id="lf" method="post"><label>E-Mail</label><input id="em" name="email" type="email" autocomplete="username" autocapitalize="off" autocorrect="off"><label>Passwort</label><input id="pw" name="password" type="password" autocomplete="current-password"><button class="btn" id="tc" type="submit" style="width:100%;margin-top:8px">Anmelden</button><p class="msg" id="lm"></p></form>');
- v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Produktdaten</h3><p class=\"meta\">Holt fehlende Fotos und Allergene für alle Artikel mit Barcode.</p><button class=\"btn s\" id=\"pd\" style=\"width:100%\">Fehlende Fotos & Allergene abrufen</button><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
+ v+='<h3>Datensicherung</h3><div class="row"><button class="btn s" id="ex">Exportieren</button><button class="btn s" id="im">Importieren</button></div><input type="file" id="imf" accept="application/json,.json" hidden><div class="row" style="margin-top:8px"><button class="btn s" id="cs">CSV importieren</button><button class="btn s" id="ct">CSV-Vorlage</button></div><input type="file" id="csf" accept=".csv,text/csv,text/plain" hidden><p class="meta" style="margin-top:14px">Die Daten liegen auf diesem Gerät. Mit Anmeldung werden sie zusätzlich auf dem Server gesichert.</p><h3>Produktdaten</h3><p class=\"meta\">Holt fehlende Fotos und Allergene für alle Artikel mit Barcode.</p><button class=\"btn s\" id=\"pd\" style=\"width:100%\">Fehlende Fotos & Allergene abrufen</button><button class=\"btn s\" id=\"pb\" style=\"width:100%;margin-top:8px\">Fehlende Marken abrufen</button><h3>Bestand löschen</h3><p class="meta">Entfernt alle Artikel. Kategorien, Lagerorte und gemerkte Barcodes bleiben erhalten.</p><button class="btn d" id="da" style="width:100%">Gesamten Bestand löschen</button>';
  $('view').innerHTML=v;
 $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){setDesign(b.dataset.z);render()}});
  if($('tc')){
@@ -257,6 +257,24 @@ $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){
   enrich().then(function(r){render();
    if(!r){alert('Es gibt keine Artikel mit Barcode, bei denen etwas fehlt.');return}
    alert(r.changed+' Angaben ergänzt.'+(r.bad?' '+r.bad+' Artikel konnten nicht abgerufen werden (Datenbank überlastet oder offline). Versuche es später noch einmal.':''))})};
+ $('pb').onclick=function(){
+  if(enriching){alert('Die Produktdaten werden gerade abgerufen. Bitte kurz warten.');return}
+  var ids=S.items.filter(function(i){return /^\d{6,}$/.test(i.code||'')&&!i.brand}).map(function(i){return i.id});
+  if(!ids.length){alert('Alle Artikel mit Barcode haben bereits eine Marke.');return}
+  enriching=true;$('pb').disabled=true;var k=0,got=0,bad=0,streak=0;
+  function end(){enriching=false;if(got)save();render();setSync(SES?'☁ Synchronisiert '+stamp():'');
+   alert(got+' Marken ergänzt.'+(bad?' '+bad+' Artikel konnten nicht abgerufen werden (Datenbank überlastet oder offline). Versuche es später noch einmal.':''))}
+  function step(){
+   if(k>=ids.length||streak>=3)return end();
+   var id=ids[k++],it=find(id);if(!it)return step();
+   setSync('Marken '+k+'/'+ids.length);
+   return lookup(it.code).then(function(r){
+    if(!r&&NETFAIL)return sleep(4000).then(function(){return lookup(it.code)});return r}).then(function(r){
+    if(!r&&NETFAIL){bad++;streak++;return step()}
+    streak=0;var cur=find(id);
+    if(cur&&r&&r.brand){cur.brand=r.brand;cur.mod=Date.now();got++}
+    return step()})}
+  step()};
  $('da').onclick=function(){
   var n=S.items.length;if(!n){alert('Der Bestand ist bereits leer.');return}
   if(!confirm('Alle '+n+' Artikel unwiderruflich löschen?\n\nKategorien und Lagerorte bleiben erhalten. Bei angemeldeter Synchronisation wird der Bestand auch auf dem Server und auf allen Geräten gelöscht.\n\nTipp: Exportiere vorher eine Sicherung.'))return;
@@ -265,7 +283,7 @@ $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){
   S.items=[];save();render()};
  $('cs').onclick=function(){$('csf').click()};
  $('csf').onchange=function(){var f=this.files[0];this.value='';if(f)readCSV(f)};
- $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;Gewicht;MHD;Allergene;Typ;Anmerkung;Füllstand\r\nVollmilch;4001234567890;Milchprodukte;Kühlschrank;2;Packung;1 l;31.12.2026;Milch;Lebensmittel;Bio-Qualität;100\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;500 ml;;;Non-Food;;50\r\n','text/csv')};
+ $('ct').onclick=function(){dl('vorrat-vorlage.csv','\uFEFFName;Barcode;Kategorie;Lagerort;Menge;Einheit;Gewicht;MHD;Allergene;Typ;Anmerkung;Füllstand;Marke;Mindestbestand\r\nVollmilch;4001234567890;Milchprodukte;Kühlschrank;2;Packung;1 l;31.12.2026;Milch;Lebensmittel;Bio-Qualität;100;Alnatura;2\r\nSpülmittel;;Putzmittel;Putzschrank;1;Flasche;500 ml;;;Non-Food;;50;Frosch;1\r\n','text/csv')};
  $('ex').onclick=function(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));
   a.download='vorrat-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()};
@@ -293,7 +311,7 @@ function parseCSV(t){
   else f+=c}
  if(f!==''||row.length)add();
  return rows}
-var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],lvl:['füllstand','fuellstand','level'],note:['anmerkung','notiz','bemerkung','kommentar','note'],weight:['gewicht','inhalt','füllmenge','fuellmenge','packungsgröße','packungsgroesse','netto','weight'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
+var HM={name:['name','artikel','produkt','bezeichnung','titel','product'],code:['barcode','ean','code','gtin'],cat:['kategorie','category','warengruppe'],loc:['lagerort','ort','location','lager','standort'],qty:['menge','anzahl','qty','quantity','stück','stueck'],unit:['einheit','unit'],lvl:['füllstand','fuellstand','level'],note:['anmerkung','notiz','bemerkung','kommentar','note'],brand:['marke','hersteller','brand'],min:['mindestbestand','mindestmenge','minimum','min','mindest'],weight:['gewicht','inhalt','füllmenge','fuellmenge','packungsgröße','packungsgroesse','netto','weight'],exp:['mhd','mindesthaltbarkeit','haltbarkeit','ablaufdatum','verfallsdatum','exp','expiry'],all:['allergene','allergens'],tr:['spuren','traces'],typ:['typ','art','type']};
 function parseDate(x){x=String(x||'').trim();var m,z=function(n){return('0'+n).slice(-2)};
  if(m=x.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return m[1]+'-'+z(m[2])+'-'+z(m[3]);
  if(m=x.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/))return(m[3].length===2?'20'+m[3]:m[3])+'-'+z(m[2])+'-'+z(m[1]);
@@ -315,7 +333,7 @@ function csvPreview(rows){
  rows.slice(1).forEach(function(r,ix){var n=g(r,'name');if(!n)return;
   var q=parseFloat(g(r,'qty').replace(',','.')),u=g(r,'unit').toLowerCase(),un='Stk';
   UN.forEach(function(x){if(x.toLowerCase()===u)un=x});
-  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||topOf('loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,weight:g(r,'weight'),note:g(r,'note'),lvl:parseLvl(g(r,'lvl')),exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:typeFromText(g(r,'typ')||g(r,'cat'))})});
+  items.push({id:'i'+t0+'_'+ix,name:n,code:g(r,'code').replace(/\s/g,''),cat:g(r,'cat')||'Sonstiges',loc:g(r,'loc')||topOf('loc')||S.locs[0],qty:isNaN(q)?1:q,unit:un,weight:g(r,'weight'),brand:g(r,'brand'),min:Math.max(0,parseFloat(g(r,'min').replace(',','.'))||0),note:g(r,'note'),lvl:parseLvl(g(r,'lvl')),exp:parseDate(g(r,'exp')),img:'',all:g(r,'all'),tr:g(r,'tr'),_t:typeFromText(g(r,'typ')||g(r,'cat'))})});
  if(!items.length){alert('Keine Artikel mit Namen gefunden.');return}
  var nc=[],nl=[],dup=0;
  items.forEach(function(i){
@@ -342,11 +360,12 @@ function csvPreview(rows){
   save();closeSheet();render();
   alert(added+' neu, '+merged+' zusammengeführt, '+skipped+' übersprungen.')}}
 function soon(i){var d=days(i.exp);return d!==null&&d<=7}
-function low(i){return(i.lvl||100)<=25}
+function belowMin(i){var m=+i.min||0;return m>0&&(+i.qty||0)<m}
+function low(i){return(i.lvl||100)<=25||belowMin(i)}
 function dotOf(i){var d=days(i.exp);
  if(d!==null&&d<0)return['r','Abgelaufen'];
- if(d!==null&&d<=3)return['o',low(i)?'Läuft bald ab, Füllstand niedrig':'Läuft bald ab'];
- if(low(i))return['o','Füllstand niedrig'];
+ if(d!==null&&d<=3)return['o',low(i)?'Läuft bald ab, Bestand niedrig':'Läuft bald ab'];
+ if(low(i))return['o',belowMin(i)?'Unter Mindestbestand ('+i.min+')':'Füllstand niedrig'];
  if(d!==null&&d<=7)return['y','Läuft in '+d+' Tagen ab'];
  return null}
 function catHue(n){n=String(n||'');var M={'Milchprodukte':205,'Obst & Gemüse':135,'Fleisch & Fisch':350,'Getränke':175,'Konserven':35,'Backen & Grundzutaten':50,'Putzmittel':225,'Drogerie':275,'Hygiene':320};
@@ -359,12 +378,12 @@ function setView(v){VM=v;try{localStorage.setItem('vorrat-view',v)}catch(e){}ren
 function TH(i){return IMG(i.img,44)||'<div class="th cat" style="--h:'+catHue(i.cat||i.name)+'">'+esc(String(i.name||'?').charAt(0).toUpperCase())+'</div>'}
 function lvBar(l){l=l||100;var c=l<=25?'lo':l<=50?'mid':'hi',n=l<=25?1:l<=50?2:3,t=l<=25?'Niedrig':l<=50?'Halb':'Voll';
  return '<div class="lv '+c+'" title="Füllstand: '+t+'" aria-label="Füllstand: '+t+'">'+[1,2,3].map(function(k){return '<i'+(k<=n?' class="f"':'')+'></i>'}).join('')+'</div>'}
-function sameItem(a,b){return['name','code','cat','loc','qty','unit','exp','weight','note','lvl','img','all','tr','noimg'].every(function(k){
- var f=function(o){var v=o[k];if(k==='lvl')v=v||100;if(k==='noimg')v=!!v;return String(v==null?'':v)};return f(a)===f(b)})}
+function sameItem(a,b){return['name','code','cat','loc','qty','unit','exp','weight','brand','min','note','lvl','img','all','tr','noimg'].every(function(k){
+ var f=function(o){var v=o[k];if(k==='lvl')v=v||100;if(k==='min')v=+v||0;if(k==='noimg')v=!!v;return String(v==null?'':v)};return f(a)===f(b)})}
 function fmtMod(t){return t?new Date(t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Unbekannt'}
 function addShop(it){
  if(S.shop.some(function(x){return x.code&&it.code?x.code===it.code:x.name.toLowerCase()===String(it.name).toLowerCase()}))return false;
- S.shop.push({id:'s'+Date.now()+Math.floor(Math.random()*1e4),name:it.name,code:it.code||'',cat:it.cat||'',loc:it.loc||'',qty:1,unit:it.unit||'Stk',weight:it.weight||'',note:it.note||'',img:it.img||'',all:it.all||'',tr:it.tr||'',done:false});
+ S.shop.push({id:'s'+Date.now()+Math.floor(Math.random()*1e4),name:it.name,code:it.code||'',cat:it.cat||'',loc:it.loc||'',qty:1,unit:it.unit||'Stk',weight:it.weight||'',brand:it.brand||'',min:it.min||0,note:it.note||'',img:it.img||'',all:it.all||'',tr:it.tr||'',done:false});
  return true}
 function removeItem(it,toShop){
  if(toShop)addShop(it);
@@ -384,7 +403,7 @@ function shopToStock(){
  got.forEach(function(x,k){
   var ex=(x.code&&S.items.filter(function(i){return i.code===x.code})[0])||S.items.filter(function(i){return i.name.toLowerCase()===x.name.toLowerCase()})[0];
   if(ex){ex.qty=(+ex.qty||0)+x.qty;ex.lvl=100;ex.mod=Date.now();merged++}
-  else{S.items.push({id:'i'+Date.now()+'_'+k,name:x.name,code:x.code||'',cat:S.cats.some(function(c){return c.n===x.cat})?x.cat:(topOf('cat')||S.cats[0].n),loc:S.locs.indexOf(x.loc)>-1?x.loc:(topOf('loc')||S.locs[0]),qty:x.qty,unit:x.unit||'Stk',exp:'',weight:x.weight||'',note:x.note||'',lvl:100,mod:Date.now(),img:x.img||'',all:x.all||'',tr:x.tr||''});added++}});
+  else{S.items.push({id:'i'+Date.now()+'_'+k,name:x.name,code:x.code||'',cat:S.cats.some(function(c){return c.n===x.cat})?x.cat:(topOf('cat')||S.cats[0].n),loc:S.locs.indexOf(x.loc)>-1?x.loc:(topOf('loc')||S.locs[0]),qty:x.qty,unit:x.unit||'Stk',exp:'',weight:x.weight||'',brand:x.brand||'',min:x.min||0,note:x.note||'',lvl:100,mod:Date.now(),img:x.img||'',all:x.all||'',tr:x.tr||''});added++}});
  S.shop=S.shop.filter(function(x){return !x.done});save();render();
  alert(added+' neu im Bestand, '+merged+' vorhandene Artikel aufgefüllt.')}
 function renderShop(){
@@ -448,12 +467,12 @@ function lookup(code){
      if(!n&&!img&&!al)return next();
      var b=(p.brands||'').split(',')[0].trim(),name=n?(b&&n.toLowerCase().indexOf(b.toLowerCase())<0?b+' ':'')+n:'';
      NETFAIL=false;
-     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:img,all:al,tr:tagsDE(p.traces_tags).join(', '),wt:(p.quantity||'').trim()}})
+     return{name:name.trim(),cat:guessCat(p.categories_tags||[],s[1]),img:img,all:al,tr:tagsDE(p.traces_tags).join(', '),wt:(p.quantity||'').trim(),brand:b}})
     .catch(function(){clearTimeout(t);net++;return next()})})}
  return next()}
 
 function openForm(it,code){
- var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||topOf('cat')||S.cats[0].n,loc:flt.loc||topOf('loc')||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',note:'',lvl:100,img:'',all:'',tr:''};
+ var n=!it||!it.id;it=it||{id:'',name:'',code:code||'',cat:flt.cat||topOf('cat')||S.cats[0].n,loc:flt.loc||topOf('loc')||S.locs[0],qty:1,unit:'Stk',exp:'',weight:'',brand:'',min:0,note:'',lvl:100,img:'',all:'',tr:''};
  var opt=function(a,s){return a.map(function(x){return '<option'+(x===s?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var ty0=catT(it.cat),catOpts=function(t,cur){var l=S.cats.filter(function(c){return c.t===t}).map(function(c){return c.n});if(cur&&l.indexOf(cur)<0)l.unshift(cur);return l.map(function(x){return '<option value="'+esc(x)+'"'+(x===cur?' selected':'')+'>'+esc(x)+'</option>'}).join('')};
  var h='<div class="fm"><div class="fhead"><div id="fph">'+PH(it.img)+'</div><div class="fbtn"><button class="btn s" id="fp">Eigenes Foto</button><button class="btn s" id="fpd">Foto entfernen</button></div></div><input type="file" id="fpf" accept="image/*" capture="environment" hidden>'
@@ -461,6 +480,7 @@ function openForm(it,code){
  +'<div class="row"><div style="flex:2"><label>Typ</label><select id="fty">'+TYPES.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===ty0?' selected':'')+'>'+t[1]+'</option>'}).join('')+'</select></div><div style="flex:3"><label>Kategorie</label><select id="fk">'+catOpts(ty0,it.cat)+'</select></div></div>'
  +'<div class="row"><div><label>Lagerort</label><select id="fl">'+opt(S.locs,it.loc)+'</select></div><div><label>Gewicht / Inhalt</label><input id="fw" value="'+esc(it.weight)+'" placeholder="z. B. 500 g"></div></div>'
  +'<div class="row"><div><label>Menge</label><input id="fq" type="number" min="0" step="any" value="'+it.qty+'"></div><div><label>Einheit</label><select id="fu">'+opt(['Stk','Packung','Flasche','Dose','g','kg','ml','l'].sort(cmp),it.unit)+'</select></div></div>'
+ +'<div class="row"><div><label>Marke</label><input id="fb" value="'+esc(it.brand)+'" placeholder="z. B. Alpro"></div><div><label>Mindestbestand</label><input id="fmin" type="number" min="0" step="any" inputmode="decimal" value="'+(+it.min||'')+'" placeholder="0 = aus"></div></div>'
  +'<label>Füllstand</label><div class="seg" id="flv"><button type="button" data-v="25">Niedrig<small>25 %</small></button><button type="button" data-v="50">Halb<small>50 %</small></button><button type="button" data-v="100">Voll<small>100 %</small></button></div>'
  +'<label>Barcode (optional)</label><div class="row"><input id="fc" inputmode="numeric" value="'+esc(it.code)+'"><button class="btn s" id="fs" style="flex:0 0 auto">Scannen</button></div><p class="meta" id="fst" style="margin:4px 0 0"></p><button class="btn s" id="fr" style="width:100%;margin-top:6px">Foto & Allergene abrufen</button>'
  +'<div class="row"><div><label>Haltbar bis</label><input id="fe" type="date" value="'+esc(it.exp)+'"></div>'+(n?'':'<div><label>Zuletzt geändert</label><input id="fmod" value="'+esc(fmtMod(it.mod))+'" readonly tabindex="-1" style="color:var(--mut)"></div>')+'</div>'
@@ -476,8 +496,8 @@ function openForm(it,code){
  $('flv').querySelectorAll('button').forEach(function(b){b.onclick=function(){curLvl=+b.dataset.v;showLvl()}});showLvl();
  $('fx').onclick=closeSheet;
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
- function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),note:$('fno').value.trim(),lvl:curLvl,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2,mod:it.mod}}
- function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=PH(curImg)}if(x.wt&&!$('fw').value)$('fw').value=x.wt;if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
+ function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),brand:$('fb').value.trim(),min:Math.max(0,+$('fmin').value||0),note:$('fno').value.trim(),lvl:curLvl,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2,mod:it.mod}}
+ function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=PH(curImg)}if(x.wt&&!$('fw').value)$('fw').value=x.wt;if(x.brand&&!$('fb').value)$('fb').value=x.brand;if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
  $('fp').onclick=function(){$('fpf').click()};
  $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=PH('')};
  $('fpf').onchange=function(){var f=this.files[0];this.value='';if(!f)return;var im=new Image(),u=URL.createObjectURL(f);
@@ -632,7 +652,7 @@ function enrich(){
    streak=0;
    var cur=find(id);
    if(cur){
-    if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.weight&&r.wt){cur.weight=r.wt;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr}
+    if(r){if(!cur.img&&!cur.noimg&&r.img){cur.img=r.img;changed++}if(!cur.all&&r.all){cur.all=r.all;changed++}if(!cur.weight&&r.wt){cur.weight=r.wt;changed++}if(!cur.tr&&r.tr)cur.tr=r.tr;if(!cur.brand&&r.brand)cur.brand=r.brand}
     cur.chk2=Date.now();done++}
    if(done&&done%10===0){save();render()}
    return step()})}
