@@ -134,7 +134,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 #zoom.open{display:flex}
 #zoom img{max-width:100%;max-height:86vh;object-fit:contain;border-radius:14px;background:#fff}
 #zx{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:20px;line-height:1}
-#fph img{cursor:zoom-in}
+#fph img,.pw img{cursor:zoom-in}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet.open{display:flex}
 .card{background:var(--bg);width:100%;max-width:640px;max-height:calc(100% - env(safe-area-inset-top,0px) - 56px);overflow:auto;overscroll-behavior:contain;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -212,15 +212,16 @@ function renderList(){
  L.forEach(function(i){
   var dt=dotOf(i);
   if(VM==='grid'){
-   v+='<div class="tile '+tcls(i.cat)+'"><div class="pw" data-e="'+i.id+'">'+TG(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
+   v+='<div class="tile '+tcls(i.cat)+'"><div class="pw" data-z="'+i.id+'">'+TG(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
     +'<div class="tn" data-e="'+i.id+'">'+esc(i.name)+'</div>'
     +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>';return}
-  v+='<div class="item '+tcls(i.cat)+'"><div class="pw" data-e="'+i.id+'">'+TH(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
+  v+='<div class="item '+tcls(i.cat)+'"><div class="pw" data-z="'+i.id+'">'+TH(i)+(dt?'<i class="dot '+dt[0]+'" title="'+esc(dt[1])+'"></i>':'')+'</div>'
    +'<div class="t" data-e="'+i.id+'"><b>'+esc(i.name)+'</b>'+(i.cat||i.brand?'<span class="meta" style="display:block;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+catChip(i.cat)+(i.brand?(i.cat?' · ':'')+esc(i.brand):'')+'</span>':'')+'</div>'
    +'<div class="qty"><button data-m="'+i.id+'">−</button><span>'+i.qty+'</span><button data-p="'+i.id+'">+</button></div></div>'});
  if(VM==='grid')v+='</div>';
  $('view').innerHTML=v;
  $('view').querySelectorAll('[data-e]').forEach(function(b){b.onclick=function(){openForm(find(b.dataset.e))}});
+ $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){var x=find(b.dataset.z);if(x&&/^(https:\/\/|data:image\/)/.test(x.img||''))zoomImg(x.img);else openForm(x)}});
  $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);i.mod=Date.now();save();render();if(i.qty===0)askDelete(i,true)}});
  $('view').querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){var x=find(b.dataset.p);x.qty++;x.mod=Date.now();save();render()}});
 }
