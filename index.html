@@ -130,6 +130,11 @@ label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 
 .btn.s{background:var(--sf);color:var(--ink);border:1px solid var(--ln)}.btn.d{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
 .fab{position:fixed;left:0;right:0;bottom:0;padding:7px 14px calc(7px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--ln);display:flex;gap:8px;max-width:640px;margin:0 auto}
 .fab .btn{flex:1;padding:8px 10px;font-size:14px;border-radius:10px}
+#zoom{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
+#zoom.open{display:flex}
+#zoom img{max-width:100%;max-height:86vh;object-fit:contain;border-radius:14px;background:#fff}
+#zx{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:20px;line-height:1}
+#fph img{cursor:zoom-in}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet.open{display:flex}
 .card{background:var(--bg);width:100%;max-width:640px;max-height:calc(100% - env(safe-area-inset-top,0px) - 56px);overflow:auto;overscroll-behavior:contain;border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -155,6 +160,7 @@ video{width:100%;border-radius:12px;background:#000;max-height:40vh}
 <div id="view"></div>
 </main>
 <div class="fab"><button class="btn s" id="bScan">Scannen</button><button class="btn" id="bAdd">Manuell hinzufügen</button></div>
+<div id="zoom" role="dialog" aria-label="Foto vergrößert"><button type="button" id="zx" aria-label="Schließen">✕</button><img id="zi" alt=""></div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
 
 <script>
@@ -295,6 +301,11 @@ $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){
 }
 
 function openSheet(h,cls){$('card').className='card'+(cls?' '+cls:'');$('card').innerHTML=h;$('card').scrollTop=0;$('sheet').classList.add('open')}
+function zoomImg(u){if(!u||!/^(https:\/\/|data:image\/)/.test(u))return;
+ var im=$('zi'),big=u.replace(/\.(100|200)\.jpg(\?.*)?$/,'.400.jpg$2');
+ im.onerror=function(){im.onerror=null;im.src=u};im.src=big;$('zoom').classList.add('open')}
+function closeZoom(){$('zoom').classList.remove('open');$('zi').removeAttribute('src')}
+$('zoom').onclick=closeZoom;
 function closeSheet(){stopScan();$('sheet').classList.remove('open')}
 $('sheet').onclick=function(e){if(e.target===$('sheet'))closeSheet()};
 
@@ -498,6 +509,7 @@ function openForm(it,code){
  $('fs').onclick=function(){var d=snap();startScan(function(c){d.code=c;openForm(d)})};
  function snap(){return{id:it.id,name:$('fn').value,code:$('fc').value,cat:$('fk').value,loc:$('fl').value,qty:+$('fq').value||0,unit:$('fu').value,exp:$('fe').value,weight:$('fw').value.trim(),brand:$('fb').value.trim(),min:Math.max(0,+$('fmin').value||0),note:$('fno').value.trim(),lvl:curLvl,img:curImg,all:$('fa').value.trim(),tr:$('ft').value.trim(),noimg:noImg,chk2:it.chk2,mod:it.mod}}
  function setExtra(x){if(x.img){curImg=x.img;noImg=false;$('fph').innerHTML=PH(curImg)}if(x.wt&&!$('fw').value)$('fw').value=x.wt;if(x.brand&&!$('fb').value)$('fb').value=x.brand;if(x.all)$('fa').value=x.all;if(x.tr)$('ft').value=x.tr}
+ $('fph').onclick=function(){zoomImg(curImg)};
  $('fp').onclick=function(){$('fpf').click()};
  $('fpd').onclick=function(){curImg='';noImg=true;$('fph').innerHTML=PH('')};
  $('fpf').onchange=function(){var f=this.files[0];this.value='';if(!f)return;var im=new Image(),u=URL.createObjectURL(f);
