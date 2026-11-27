@@ -222,7 +222,7 @@ function renderList(){
  $('view').innerHTML=v;
  $('view').querySelectorAll('[data-e]').forEach(function(b){b.onclick=function(){openForm(find(b.dataset.e))}});
  $('view').querySelectorAll('[data-z]').forEach(function(b){b.onclick=function(){var x=find(b.dataset.z);if(x&&/^(https:\/\/|data:image\/)/.test(x.img||''))zoomImg(x.img);else openForm(x)}});
- $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m);i.qty=Math.max(0,i.qty-1);i.mod=Date.now();save();render();if(i.qty===0)askDelete(i,true)}});
+ $('view').querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){var i=find(b.dataset.m),pv=+i.qty||0;i.qty=Math.max(0,i.qty-1);i.mod=Date.now();save();render();if(i.qty===0)askDelete(i,true);else if(hitMin(pv,i))askMin(i)}});
  $('view').querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){var x=find(b.dataset.p);x.qty++;x.mod=Date.now();save();render()}});
 }
 function find(id){return S.items.filter(function(i){return i.id===id})[0]}
@@ -372,12 +372,12 @@ function csvPreview(rows){
   save();closeSheet();render();
   alert(added+' neu, '+merged+' zusammengeführt, '+skipped+' übersprungen.')}}
 function soon(i){var d=days(i.exp);return d!==null&&d<=7}
-function belowMin(i){var m=+i.min||0;return m>0&&(+i.qty||0)<m}
+function belowMin(i){var m=+i.min||0;return m>0&&(+i.qty||0)<=m}
 function low(i){return(i.lvl||100)<=25||belowMin(i)}
 function dotOf(i){var d=days(i.exp);
  if(d!==null&&d<0)return['r','Abgelaufen'];
  if(d!==null&&d<=3)return['o',low(i)?'Läuft bald ab, Bestand niedrig':'Läuft bald ab'];
- if(low(i))return['o',belowMin(i)?'Unter Mindestbestand ('+i.min+')':'Füllstand niedrig'];
+ if(low(i))return['o',belowMin(i)?'Mindestbestand erreicht ('+i.min+')':'Füllstand niedrig'];
  if(d!==null&&d<=7)return['y','Läuft in '+d+' Tagen ab'];
  return null}
 function catHue(n){n=String(n||'');var M={'Milchprodukte':205,'Obst & Gemüse':135,'Fleisch & Fisch':350,'Getränke':175,'Konserven':35,'Backen & Grundzutaten':50,'Putzmittel':225,'Drogerie':275,'Hygiene':320};
@@ -409,6 +409,15 @@ function askDelete(it,empty){
  $('d1').onclick=function(){removeItem(st,true)};
  $('d2').onclick=function(){removeItem(st,false)};
  $('d3').onclick=function(){if(empty)closeSheet();else openForm(st)}}
+function onShop(it){return S.shop.some(function(x){return x.code&&it.code?x.code===it.code:x.name.toLowerCase()===String(it.name).toLowerCase()})}
+function hitMin(prev,it){var m=+it.min||0;return m>0&&prev>m&&(+it.qty||0)<=m&&(+it.qty||0)>0&&!onShop(it)}
+function askMin(it){
+ var st=find(it.id)||it;
+ openSheet('<h2 style="margin:0 0 6px">Mindestbestand erreicht</h2><p class="meta">„'+esc(st.name)+'“: Menge '+esc(st.qty)+', Mindestbestand '+esc(st.min)+'. Soll der Artikel auf die Einkaufsliste?</p>'
+  +'<button class="btn" id="m1" style="width:100%;margin-top:12px">Zur Einkaufsliste hinzufügen</button>'
+  +'<button class="btn s" id="m2" style="width:100%;margin-top:8px">Nein, nicht jetzt</button>');
+ $('m1').onclick=function(){addShop(st);save();closeSheet();render()};
+ $('m2').onclick=closeSheet}
 function shopToStock(){
  var got=S.shop.filter(function(x){return x.done});if(!got.length)return;
  var added=0,merged=0;
@@ -537,7 +546,8 @@ function openForm(it,code){
   var old=n?null:find(it.id);d.mod=(old&&sameItem(old,d))?old.mod:Date.now();
   if(n){d.id='i'+Date.now();S.items.push(d)}else{S.items[S.items.indexOf(find(it.id))]=d}
   if(d.code)S.codes[d.code]={name:d.name,cat:d.cat,loc:d.loc,unit:d.unit,img:/^https:/.test(d.img||'')?d.img:'',all:d.all,tr:d.tr,wt:d.weight};
-  save();closeSheet();render()};
+  var pq=old?(+old.qty||0):0;
+  save();closeSheet();render();if(old&&hitMin(pq,d))askMin(d)};
  if($('fdel'))$('fdel').onclick=function(){askDelete(it)};
 }
 
